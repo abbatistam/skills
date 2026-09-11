@@ -12,85 +12,39 @@ tags: [vue3, composables, composition-api, code-organization, api-design, readon
 
 ## Task List
 
-- Compose complex behavior from small, focused composables
-- Use options objects for composables with multiple optional parameters
-- Return readonly state when updates must flow through explicit actions
-- Keep pure utility functions as plain utilities, not composables
-- Organize composable and component code by feature concern, and extract composables when components grow
+- Extract cohesive workflows or actual reuse; keep simple local state in its component
+- Keep related state, actions, and lifecycle cleanup together
+- Expose consumer-facing state and actions; keep internal refs and helpers private
+- Use options objects for optional configuration, not to hide unrelated dependencies
+- Return readonly state when mutations must go through actions
+- Keep pure utility functions as plain utilities
 
-## Compose Composables from Smaller Primitives
+## Choose an Extraction Boundary
 
-**BAD:**
+Reactive state alone does not justify a composable. Extract when a reusable capability or substantial workflow can hide its implementation behind a useful API. If a split requires mutual callbacks or access to most of the caller's state, reconsider ownership or keep the logic together.
+
+**Appropriate local state for a single disclosure:**
 ```vue
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+<script setup lang="ts">
+import { shallowRef } from 'vue'
 
-const x = ref(0)
-const y = ref(0)
-const inside = ref(false)
-const el = ref(null)
-
-function onMove(e) {
-  x.value = e.pageX
-  y.value = e.pageY
-  if (!el.value) return
-  const r = el.value.getBoundingClientRect()
-  inside.value = x.value >= r.left && x.value <= r.right &&
-    y.value >= r.top && y.value <= r.bottom
-}
-
-onMounted(() => window.addEventListener('mousemove', onMove))
-onUnmounted(() => window.removeEventListener('mousemove', onMove))
+const expanded = shallowRef(false)
 </script>
+
+<template>
+  <button type="button" :aria-expanded="expanded" @click="expanded = !expanded">
+    Details
+  </button>
+  <p v-if="expanded">Additional information</p>
+</template>
 ```
 
-**GOOD:**
-```javascript
-// composables/useEventListener.js
-import { onMounted, onUnmounted, toValue } from 'vue'
+## Keep Composable APIs Focused
 
-export function useEventListener(target, event, callback) {
-  onMounted(() => toValue(target).addEventListener(event, callback))
-  onUnmounted(() => toValue(target).removeEventListener(event, callback))
-}
-```
-
-```javascript
-// composables/useMouse.js
-import { ref } from 'vue'
-import { useEventListener } from './useEventListener'
-
-export function useMouse() {
-  const x = ref(0)
-  const y = ref(0)
-
-  useEventListener(window, 'mousemove', (e) => {
-    x.value = e.pageX
-    y.value = e.pageY
-  })
-
-  return { x, y }
-}
-```
-
-```javascript
-// composables/useMouseInElement.js
-import { computed } from 'vue'
-import { useMouse } from './useMouse'
-
-export function useMouseInElement(elementRef) {
-  const { x, y } = useMouse()
-
-  const isOutside = computed(() => {
-    if (!elementRef.value) return true
-    const rect = elementRef.value.getBoundingClientRect()
-    return x.value < rect.left || x.value > rect.right ||
-      y.value < rect.top || y.value > rect.bottom
-  })
-
-  return { x, y, isOutside }
-}
-```
+- Return the state and operations consumers need. Keep request handles, bookkeeping, and private helpers internal.
+- When composing composables, preserve meaningful capability boundaries rather than re-exporting every internal member.
+- Create shared state once per intended scope and pass or provide that instance. Calling a stateful composable in each consumer usually creates separate state.
+- Keep DOM refs, focus, and pointer handling with their owning UI or composable. Share only the state or operations needed for coordination.
 
 ## Use Options Object Pattern for Composable Parameters
 
@@ -223,68 +177,5 @@ import { formatCurrency } from '@/utils/formatters'
 export function useInvoiceSummary(invoiceRef) {
   const totalLabel = computed(() => formatCurrency(invoiceRef.value.total))
   return { totalLabel }
-}
-```
-
-## Organize Composable and Component Code by Feature Concern
-
-**BAD:**
-```vue
-<script setup>
-import { ref, computed, watch, onMounted } from 'vue'
-
-const searchQuery = ref('')
-const items = ref([])
-const selected = ref(null)
-const showModal = ref(false)
-const sortBy = ref('name')
-const filter = ref('all')
-const loading = ref(false)
-
-const filtered = computed(() => items.value.filter(i => i.category === filter.value))
-function openModal() { showModal.value = true }
-const sorted = computed(() => [...filtered.value].sort(/* ... */))
-watch(searchQuery, () => { /* ... */ })
-onMounted(() => { /* ... */ })
-</script>
-```
-
-**GOOD:**
-```vue
-<script setup>
-import { useItems } from '@/composables/useItems'
-import { useSearch } from '@/composables/useSearch'
-import { useSelectionModal } from '@/composables/useSelectionModal'
-
-// Data
-const { items, loading, fetchItems } = useItems()
-
-// Search/filter/sort
-const { query, visibleItems } = useSearch(items)
-
-// Selection + modal
-const { selectedItem, isModalOpen, selectItem, closeModal } = useSelectionModal()
-</script>
-```
-
-```javascript
-// composables/useItems.js
-import { ref, onMounted } from 'vue'
-
-export function useItems() {
-  const items = ref([])
-  const loading = ref(false)
-
-  async function fetchItems() {
-    loading.value = true
-    try {
-      items.value = await api.getItems()
-    } finally {
-      loading.value = false
-    }
-  }
-
-  onMounted(fetchItems)
-  return { items, loading, fetchItems }
 }
 ```
