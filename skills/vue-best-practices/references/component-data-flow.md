@@ -215,6 +215,29 @@ const emit = defineEmits(['update:modelValue'])
 
 If you need the updated value immediately after a change, use the input event value or `nextTick` in the parent.
 
+## Diagnose Forwarding Before Choosing a Transport
+
+When intermediate components mainly relay a descendant's private interactions, inspect ownership before changing props to injection or merging components:
+
+- Move UI-local state, DOM refs, listeners, and their cleanup to the component that owns that interaction, or a composable used there.
+- Keep data needed by multiple consumers at an owner whose lifetime matches their shared use. Coordinate cross-feature actions through that owner's public contract.
+- Use props/emits for direct contracts and scoped context for shared descendant dependencies. A useful UI component can retain its own boundary even when its descendants need common interaction state.
+- Merge a wrapper when it adds no useful UI, policy, or encapsulation. Do not merge substantial distinct responsibilities solely to avoid forwarding.
+
+**BAD:**
+```vue
+<!-- Ancestors know the private pointer interaction of an item. -->
+<ItemList :dragging-id="draggingId" @pointer-move="moveItem" @pointer-up="finishDrag" />
+```
+
+**GOOD:**
+```vue
+<!-- The owning interaction translates DOM events into a feature operation. -->
+<ItemList :items="items" @reorder="reorderItems" />
+```
+
+The list owns pointer tracking and cleanup; its consumer owns the ordering policy. If internal list descendants share drag state, provide only that scoped capability. Ordinary row display data can still use props. A controlled low-level component may intentionally expose DOM events; the issue is incidental relaying across unrelated feature boundaries.
+
 ## Provide/Inject: Scoped Shared Dependencies
 
 Prefer props/emits for direct, explicit contracts. Use provide/inject when related descendants share state or operations and intermediate components only relay them. Check that those component boundaries are useful before introducing context.

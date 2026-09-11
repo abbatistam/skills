@@ -14,7 +14,7 @@ Use this skill as an instruction set. Follow the workflow in order unless the us
 ## Core Principles
 - **Keep state predictable:** one source of truth, derive everything else.
 - **Make data flow explicit:** Props down, Events up for most cases.
-- **Favor cohesive boundaries:** keep related behavior together and public interfaces narrow.
+- **Decompose by responsibility:** keep each implementation focused and the contracts between implementations explicit.
 - **Avoid unnecessary re-renders:** use computed properties and watchers wisely.
 - **Readability counts:** write clear, self-documenting code.
 
@@ -37,10 +37,10 @@ Use this skill as an instruction set. Follow the workflow in order unless the us
 
 For a non-trivial feature or structural refactor, sketch responsibilities, state owners, and the contracts that cross their boundaries. For local fixes, preserve existing boundaries unless they obstruct the change.
 
-- Describe each proposed component's responsibility and what it hides from its consumers.
-- Keep closely coupled state, logic, and markup together; identify shared state and its intended lifetime.
-- Let root/route components compose features and coordinate page behavior. Extract independent features; avoid wrappers added solely to shorten a file.
-- Follow the project's layout; group related components and composables by feature when useful.
+- Identify substantial UI responsibilities, stateful workflows, and DOM lifecycles in the affected feature. Sketch their owners, consumers, and the contracts needed for coordination.
+- Judge cohesion by behavior that changes together or maintains a shared invariant. Being on the same page, reading the same data, or having only one consumer does not by itself justify one implementation.
+- Let root/route components compose features and coordinate page behavior. Apply the same responsibility review inside feature components and composables; moving a whole feature to a child or a `useFeature()` function is not sufficient decomposition.
+- Follow the project's layout and scale the design to the affected behavior. A local fix does not require a project-wide component map or new architectural layers.
 
 ## 2) Apply essential Vue foundations (required)
 
@@ -63,10 +63,11 @@ These are essential, must-know foundations. Apply all of them in every Vue task 
 
 ### Choose useful boundaries
 
-- Extract components to encapsulate a coherent UI responsibility, isolate substantial behavior, or serve actual reuse. A component may own the state and event handling needed by its UI.
-- Treat file length, UI section count, and API size as review signals, not extraction thresholds. Small production features may remain in one SFC.
-- Before accepting a split, compare what consumers must know. If it mainly adds forwarding, mutual callbacks, or exposed internals, move responsibilities or merge the boundary.
-- Group inputs only when they form a cohesive concept. Large state/handler objects and catch-all events do not fix unclear ownership.
+- Extract substantial, separable UI responsibilities and stateful workflows when doing so reduces the code a consumer or maintainer must understand. Single-use components and composables are valid; reuse is not a prerequisite. Keep the state and event handling needed by a UI responsibility with that UI.
+- During a structural refactor, implement useful boundaries for the responsibilities identified above. Review what remains together as well as what was extracted. A small public API can hide an implementation that still needs decomposition.
+- Treat file length, UI section count, and API size as review signals, not extraction thresholds. Keep a small cohesive production feature in one SFC when extra boundaries would not hide meaningful complexity.
+- If a split adds extensive forwarding or mutual callbacks, first move local state and DOM behavior to their UI owner, then identify genuinely shared dependencies and their lifetime. Use explicit contracts or scoped context as appropriate. Merge only when the boundary has no useful responsibility to encapsulate, not merely to reduce wiring.
+- Group inputs only when they form a cohesive concept. Passing a whole controller, grouping unrelated handlers, or adding catch-all events does not reduce the dependencies consumers must understand.
 
 ### Component data flow
 
@@ -79,9 +80,10 @@ These are essential, must-know foundations. Apply all of them in every Vue task 
 ### Composables
 
 - Must-read reference from `1.1`: [composables](references/composables.md)
-- Extract for actual reuse or to encapsulate a cohesive stateful workflow/lifecycle. Keep simple component-local logic local.
-- Return only consumer-facing state and actions; keep implementation details private instead of flattening all internal refs and helpers into one API.
-- Keep DOM interaction with its owning component or composable; expose only what other features need to coordinate.
+- Compose substantial stateful behavior from focused capabilities, including single-use workflows that improve code organization. Keep simple component-local logic local; use plain functions for pure calculations.
+- Distinguish implementation ownership from the public facade. A coordinator connects capabilities and implements cross-capability operations; it should not contain all their implementations or re-export all their internals.
+- Return consumer-facing state and actions. If a consumer needs unrelated groups of internals, review that consumer's responsibilities too. Encapsulate reactive bookkeeping so consumers can read current values without manually triggering invalidation.
+- Keep DOM interaction and cleanup with its owning UI or composable. Preserve the explicit coordination other features need, such as committing a pending draft before saving.
 
 ## 3) Consider optional features only when requirements call for them
 
@@ -125,8 +127,9 @@ Performance work is a post-functionality pass. Do not optimize before core behav
 - All must-read references were read and applied.
 - Reactivity model is minimal and predictable.
 - SFC structure and template rules are followed.
-- Each extraction has an encapsulation or reuse benefit; closely coupled behavior stays together.
-- Public contracts are typed and hide internals; local changes do not require unrelated forwarding edits.
-- State has explicit ownership and lifetime; shared consumers use the same intended instance.
+- Both sides of the boundary review pass: substantial separable responsibilities are not still concentrated in one implementation, and extracted units hide useful complexity rather than merely forward it.
+- Public contracts are typed and hide internals. Trace a representative local change through the code: it should stay with its responsible UI/workflow and legitimate coordination, without unrelated forwarding edits.
+- State has explicit ownership and lifetime; shared consumers use the same intended instance, independent instances remain independent, and side effects clean up with their owner.
+- Refactors preserve existing behavior, including pending work and cross-feature operations. Use the project's applicable tests; API or file-size reductions alone are not evidence of success.
 - Optional features are used only when requirements demand them.
 - Performance changes were applied only after functionality was complete.
