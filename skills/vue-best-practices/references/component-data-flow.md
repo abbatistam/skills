@@ -15,10 +15,11 @@ The main principle of data flow in Vue.js is **Props Down / Events Up**. This is
 ## Task List
 
 - Treat props as read-only inputs
+- Use reactive props destructure in `<script setup>` in Vue 3.5+
 - Use props/emit for component communication; reserve refs for imperative actions
 - When refs are required for imperative APIs, type them with template refs
 - Emit events instead of mutating parent state directly
-- Use `defineModel` for v-model in modern Vue (3.4+)
+- Use `defineModel` for v-model in Vue 3.4+
 - Handle v-model modifiers deliberately in child components
 - Use typed, scoped provide/inject for shared descendant dependencies when intermediate components only relay them
 - Keep mutations in the provider or expose explicit actions
@@ -42,6 +43,41 @@ function increment() {
 **GOOD:**
 
 If state needs to change, emit an event, use `v-model` or create a local copy.
+
+## Use reactive props destructure
+
+For Vue 3.5+: destructure directly from `defineProps()` in `<script setup>` and use native default values. Accesses in the same block stay reactive. Before Vue 3.5, keep `props.title` access and use `withDefaults` for type-based defaults.
+
+Pass destructured props to `watch` or composables through getters to preserve reactivity.
+
+**BAD:**
+```vue
+<script setup lang="ts">
+import { watch } from 'vue'
+
+const { title = 'Untitled', count } = defineProps<{
+  title?: string
+  count: number
+}>()
+
+watch(count, (value) => console.log(value))
+</script>
+```
+
+**GOOD:**
+```vue
+<script setup lang="ts">
+import { computed, watch } from 'vue'
+
+const { title = 'Untitled', count } = defineProps<{
+  title?: string
+  count: number
+}>()
+
+const heading = computed(() => `${title.trim()} (${count})`)
+watch(() => count, (value) => console.log(value))
+</script>
+```
 
 ## Prefer props/emit over component refs
 
