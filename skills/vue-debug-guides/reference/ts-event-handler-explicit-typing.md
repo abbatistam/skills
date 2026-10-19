@@ -1,27 +1,27 @@
 ---
-title: Always Explicitly Type Event Handlers
+title: Type DOM Event Parameters in Vue TypeScript Handlers
 impact: MEDIUM
-impactDescription: Without explicit typing, event parameters have implicit 'any' type causing TypeScript errors in strict mode
+impactDescription: An untyped event parameter in a script handler can fail TypeScript strict checks and leave DOM targets too broad
 type: gotcha
 tags: [vue3, typescript, events, dom-events, composition-api]
 ---
 
-# Always Explicitly Type Event Handlers
+# Type DOM Event Parameters in Vue TypeScript Handlers
 
-**Impact: MEDIUM** - Native DOM event handlers in Vue components have implicit `any` type for the `event` parameter. In TypeScript strict mode, this causes errors. You must explicitly type event parameters and use type assertions for `event.target`.
+Vue listeners on native elements receive the browser's native DOM event. When a handler is declared in script, annotate its parameter with the appropriate event type; with `strict` or `noImplicitAny`, an unannotated parameter is an implicit-`any` error. The base `EventTarget` type also does not expose element-specific properties such as `value`, so narrow or assert the target when needed. Vue does not wrap DOM events in a React-style synthetic event system.
 
 ## Task Checklist
 
-- [ ] Always type the `event` parameter explicitly (e.g., `Event`, `MouseEvent`)
+- [ ] In script-defined handlers, type the `event` parameter (e.g., `Event`, `MouseEvent`)
 - [ ] Use type assertions when accessing element-specific properties
 - [ ] Consider using inline handlers for simple cases
-- [ ] Be aware of Vue's synthetic event system
+- [ ] Treat native-element listeners as browser DOM events; use `defineEmits` payload types for component events
 
 ## The Problem
 
 ```vue
 <script setup lang="ts">
-// WRONG: event has implicit 'any' type
+// WRONG in a strict TypeScript project: event has implicit 'any' type
 function handleChange(event) {  // Error in strict mode!
   console.log(event.target.value)  // Also error: target might be null
 }
@@ -116,21 +116,13 @@ function handleFormSubmit(event: SubmitEvent) {
 </script>
 ```
 
-## Inline Event Handler Pattern
+## Inline Template Handler Pattern
 
-For simple cases, inline handlers with type annotations work well:
+For a simple inline expression, use Vue's template event value. TypeScript assertions can narrow the event target when the project's Vue tooling supports TypeScript template expressions:
 
 ```vue
 <template>
-  <!-- Inline with type assertion -->
-  <input
-    @input="(event: Event) => {
-      const input = event.target as HTMLInputElement
-      searchQuery = input.value
-    }"
-  />
-
-  <!-- Or with $event cast -->
+  <!-- A TypeScript assertion narrows the native event target -->
   <input @input="searchQuery = ($event.target as HTMLInputElement).value" />
 </template>
 ```
@@ -208,6 +200,7 @@ function handleClick(event: MouseEvent) {
 ```
 
 ## Reference
-- [Vue.js TypeScript with Composition API - Event Handlers](https://vuejs.org/guide/typescript/composition-api.html#typing-event-handlers)
+- [Vue.js Event Handling](https://vuejs.org/guide/essentials/event-handling.html) — method handlers receive the native DOM event.
+- [Vue.js TypeScript with Composition API - Event Handlers](https://vuejs.org/guide/typescript/composition-api.html#typing-event-handlers) — event parameter and target typing.
 - [MDN Event Reference](https://developer.mozilla.org/en-US/docs/Web/Events)
 - [TypeScript DOM Types](https://github.com/microsoft/TypeScript/blob/main/lib/lib.dom.d.ts)

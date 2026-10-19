@@ -8,18 +8,18 @@ tags: [vue3, render-function, h, v-model, directives, performance, jsx]
 
 # Render Function Patterns and Performance
 
-**Impact: MEDIUM** - Render functions are powerful but opt out of template compiler optimizations. Use them intentionally and apply the key patterns below to keep output correct and performant.
+**Impact: MEDIUM** - Templates are Vue's recommended default. Use render functions when the full programmatic power of JavaScript is needed, and follow Vue's vnode, event, and component conventions.
 
 ## Task List
 
-- Prefer templates; use render functions only when templates cannot express the logic
+- Prefer templates in most cases; use render functions when they make dynamic composition clearer or templates cannot express the requirement
 - Always add stable keys when rendering lists with `h()`/JSX
 - Use `withModifiers` / `withKeys` for event modifiers
 - Implement `v-model` via `modelValue` + `onUpdate:modelValue`
 - Apply custom directives with `withDirectives`
-- Use functional components for stateless presentational UI
+- Use function components when a stateless vnode-producing function fits the API; do not choose them as an automatic performance optimization
 
-## Prefer templates over render functions
+## Prefer templates in most cases
 
 **BAD:**
 ```vue
@@ -174,7 +174,7 @@ export default {
 }
 ```
 
-## Prefer functional components for stateless UI
+## Functional Components for Stateless Render Logic
 
 **BAD:**
 ```javascript
@@ -195,7 +195,12 @@ function Badge(props, { slots }) {
   return h('span', { class: 'badge' }, slots.default?.())
 }
 
-Badge.props = ['variant']
-
 export default Badge
 ```
+
+Functional components are rendered without a component instance and do not have component lifecycle hooks. Use them when a plain function is a good fit for a stateless render contract, not as a blanket replacement for ordinary components.
+
+## Sources
+
+- [Vue: Render Functions & JSX](https://vuejs.org/guide/extras/render-function.html) — when render functions are appropriate, vnode uniqueness, `h()`, events, `v-model`, directives, and functional components.
+- [Vue: Rendering Mechanism](https://vuejs.org/guide/extras/rendering-mechanism.html) — Vue's rendering pipeline and compiler-generated optimization hints.

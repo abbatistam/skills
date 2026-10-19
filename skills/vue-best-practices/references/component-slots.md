@@ -80,7 +80,7 @@ Use `$slots` checks when wrapper elements add spacing, borders, or layout constr
 
 ## Type Scoped Slot Props with defineSlots
 
-In `<script setup lang="ts">`, use `defineSlots` so slot consumers get autocomplete and static checks.
+In Vue 3.3+, `defineSlots` in `<script setup lang="ts">` can type the slot-props contract for consumers. It is a compile-time macro and does not need to be imported.
 
 **BAD:**
 ```vue
@@ -214,3 +214,10 @@ const { x, y } = useMouse()
   <p>{{ x }}, {{ y }}</p>
 </template>
 ```
+
+## Sources
+
+- [Vue: Slots](https://vuejs.org/guide/components/slots.html) — named and scoped slots, slot fallback content, and conditional rendering with `$slots`.
+- [Vue: TypeScript with Composition API](https://vuejs.org/guide/typescript/composition-api.html#typing-component-slots) — `defineSlots` typing and Vue 3.3+ availability.
+- [Vue: Composables](https://vuejs.org/guide/reusability/composables.html) — reusing stateful logic with functions and lifecycle cleanup.
+- [Vue: Performance](https://vuejs.org/guide/best-practices/performance.html#avoid-unnecessary-component-abstractions) — component-instance costs when introducing abstractions.

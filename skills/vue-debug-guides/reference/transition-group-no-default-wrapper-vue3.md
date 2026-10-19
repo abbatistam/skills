@@ -14,7 +14,7 @@ If your code relies on the wrapper element for styling or layout, you must expli
 
 ## Task Checklist
 
-- [ ] When migrating from Vue 2, add explicit `tag` prop to all `<TransitionGroup>` components
+- [ ] When migrating from Vue 2, check whether each usage depends on the old wrapper and add `tag` only when it does
 - [ ] Review CSS selectors that targeted the wrapper element
 - [ ] Update parent component styles that expected a wrapper element
 - [ ] Consider if the wrapper element is actually needed in Vue 3

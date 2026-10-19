@@ -1,20 +1,20 @@
 ---
 title: State-driven Animations with CSS Transitions and Style Bindings
 impact: LOW
-impactDescription: Combining Vue's reactive style bindings with CSS transitions creates smooth, interactive animations
+impactDescription: Reactive style bindings can drive CSS transitions and state-dependent visual changes
 type: best-practice
 tags: [vue3, animation, css, transition, style-binding, state, interactive]
 ---
 
 # State-driven Animations with CSS Transitions and Style Bindings
 
-**Impact: LOW** - For responsive, interactive animations that react to user input or state changes, combine Vue's dynamic style bindings with CSS transitions. This creates smooth animations that interpolate values in real-time based on state.
+**Impact: LOW** - For visual changes driven by state or user input, bind the relevant style values and use CSS transitions where interpolation is appropriate. Choose the animated properties and update frequency based on the effect and measured browser behavior.
 
 ## Task List
 
 - Use `:style` binding for dynamic properties that change frequently
 - Add CSS `transition` property to smoothly animate between values
-- Consider using `transform` and `opacity` for GPU-accelerated animations
+- Consider `transform` and `opacity` when they express the effect; they usually avoid per-frame layout work
 - For complex value interpolation, use watchers with animation libraries
 
 ## Basic Pattern
@@ -273,7 +273,7 @@ watch(targetNumber, (newValue) => {
 
 ```vue
 <style>
-/* GOOD: GPU-accelerated properties */
+  /* Often efficient properties to animate */
 .element {
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
@@ -283,9 +283,16 @@ watch(targetNumber, (newValue) => {
   transition: width 0.3s ease, height 0.3s ease, margin 0.3s ease;
 }
 
-/* For high-frequency updates, consider will-change */
-.frequently-animated {
-  will-change: transform;
-}
 </style>
 ```
+
+`transform` and `opacity` generally avoid layout recalculation during animation, but do not guarantee that every animation is smooth or GPU-accelerated. Properties such as `width`, `height`, and `margin` can trigger layout; choose based on the design and profile the result. MDN recommends treating `will-change` as a last resort because overuse can consume resources and make performance worse.
+
+For scroll-driven effects, avoid assuming that updating reactive state on every scroll event will be inexpensive. Measure the specific page, and consider browser-native CSS scroll-driven animations when they fit the required browser support.
+
+## Sources
+
+- [Vue: Animation Techniques](https://vuejs.org/guide/extras/animation.html#state-driven-animations) — style bindings for state-driven transitions, including color and dimension changes.
+- [Vue: Transition Performance Considerations](https://vuejs.org/guide/built-ins/transition.html#performance-considerations) — layout and animation behavior for `transform` and `opacity` compared with properties such as `height` and `margin`.
+- [MDN: `will-change`](https://developer.mozilla.org/en-US/docs/Web/CSS/will-change) — rendering hints, resource costs, and guidance to use the property only for existing performance problems.
+- [MDN: Scroll-driven animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_scroll-driven_animations) — browser-native scroll timeline techniques and compatibility information.

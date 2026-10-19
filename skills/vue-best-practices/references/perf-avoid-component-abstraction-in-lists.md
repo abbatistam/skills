@@ -1,159 +1,47 @@
 ---
-title: Avoid Excessive Component Abstraction in Large Lists
+title: Avoid Unnecessary Component Abstractions in Large Lists
 impact: MEDIUM
-impactDescription: Each component instance has memory and render overhead - abstractions multiply this in lists
+impactDescription: Many component instances can add update and memory overhead in a large rendered list
 type: efficiency
 tags: [vue3, performance, components, abstraction, lists, optimization]
 ---
 
-# Avoid Excessive Component Abstraction in Large Lists
+# Avoid Unnecessary Component Abstractions in Large Lists
 
-**Impact: MEDIUM** - Component instances are more expensive than plain DOM nodes. While abstractions improve code organization, unnecessary nesting creates overhead. In large lists, this overhead multiplies - 100 items with 3 levels of abstraction means 300+ component instances instead of 100.
-
-Don't avoid abstraction entirely, but be mindful of component depth in frequently-rendered elements like list items.
+Component instances have more overhead than plain DOM nodes. In a large rendered list, deeply nested components that add no useful behavior or boundary can add avoidable work. Keep abstractions that provide a meaningful contract, reuse, policy, or encapsulation; simplify only when profiling identifies component overhead as a problem.
 
 ## Task List
 
-- Review list item components for unnecessary wrapper components
-- Consider flattening component hierarchies in hot paths
-- Use native elements when a component adds no value
-- Profile component counts using Vue DevTools
-- Focus optimization efforts on the most-rendered components
+- Measure the rendered list under representative data and interactions
+- Inspect component count and update work in Vue DevTools or the browser performance panel
+- Look for wrappers that only forward props, slots, or events without adding a useful boundary
+- Preserve components that own meaningful behavior or public contracts
+- Consider virtualization or pagination when the rendered item count itself is the bottleneck
 
-**BAD:**
-```vue
-<!-- BAD: Deep abstraction in list items -->
-<template>
-  <div class="user-list">
-    <!-- For 100 users: Creates 400 component instances -->
-    <UserCard v-for="user in users" :key="user.id" :user="user" />
-  </div>
-</template>
+## Choose Abstraction by Responsibility
 
-<!-- UserCard.vue -->
-<template>
-  <Card>  <!-- Wrapper component #1 -->
-    <CardHeader>  <!-- Wrapper component #2 -->
-      <UserAvatar :src="user.avatar" />  <!-- Wrapper component #3 -->
-    </CardHeader>
-    <CardBody>  <!-- Wrapper component #4 -->
-      <Text>{{ user.name }}</Text>
-    </CardBody>
-  </Card>
-</template>
-
-<!-- Each UserCard creates: Card + CardHeader + CardBody + UserAvatar + Text
-     100 users = 500+ component instances -->
-```
-
-**GOOD:**
-```vue
-<!-- GOOD: Flattened structure in list items -->
-<template>
-  <div class="user-list">
-    <!-- For 100 users: Creates 100 component instances -->
-    <UserCard v-for="user in users" :key="user.id" :user="user" />
-  </div>
-</template>
-
-<!-- UserCard.vue - Flattened, uses native elements -->
-<script setup>
-defineProps({
-  user: Object
-})
-</script>
-
-<template>
-  <div class="card">
-    <div class="card-header">
-      <img :src="user.avatar" :alt="user.name" class="avatar" />
-    </div>
-    <div class="card-body">
-      <span class="user-name">{{ user.name }}</span>
-    </div>
-  </div>
-</template>
-
-<style scoped>
-/* Styles that would have been in Card, CardHeader, etc. */
-.card { /* ... */ }
-.card-header { /* ... */ }
-.card-body { /* ... */ }
-.avatar { /* ... */ }
-</style>
-```
-
-## When Abstraction Is Still Worth It
+This list item component is justified if it owns a stable interface, shared behavior, or styling contract used elsewhere:
 
 ```vue
-<!-- Component abstraction is valuable when: -->
-
-<!-- 1. Complex behavior is encapsulated -->
-<UserStatusIndicator :user="user" />  <!-- Has logic, tooltips, etc. -->
-
-<!-- 2. Reused outside of the hot path -->
-<Card>  <!-- OK to use in one-off places, not in 100-item lists -->
-
-<!-- 3. The list itself is small -->
-<template v-if="items.length < 20">
-  <FancyItem v-for="item in items" :key="item.id" />
+<template>
+  <ul>
+    <li v-for="user in users" :key="user.id">
+      <UserCard :user="user" @select="selectUser" />
+    </li>
+  </ul>
 </template>
-
-<!-- 4. Virtualization is used (only ~20 items rendered at once) -->
-<RecycleScroller :items="items">
-  <template #default="{ item }">
-    <ComplexItem :item="item" />  <!-- OK - only 20 instances exist -->
-  </template>
-</RecycleScroller>
 ```
 
-## Measuring Component Overhead
+If profiling instead shows a hot path dominated by trivial wrapper instances, render simple markup directly or reduce only the unnecessary layers. Avoid changing component boundaries based on a fixed list-size threshold; the cost depends on what each component does and how often it updates.
 
-```javascript
-// In development, profile component counts
-import { onMounted, getCurrentInstance } from 'vue'
+Virtualization can reduce the number of mounted rows, while component simplification can reduce the cost of each rendered row. These solve different bottlenecks. A virtualizer's mounted window depends on its viewport, buffer, row sizes, and configuration, so measure the chosen implementation rather than assuming a fixed number of instances.
 
-onMounted(() => {
-  const instance = getCurrentInstance()
-  let count = 0
+## Measure the Actual Work
 
-  function countComponents(vnode) {
-    if (vnode.component) count++
-    if (vnode.children) {
-      vnode.children.forEach(child => {
-        if (child.component || child.children) countComponents(child)
-      })
-    }
-  }
+Use Vue DevTools' performance profiling and the browser's Performance panel to identify component updates and expensive work. Vue can also add component performance markers with `app.config.performance` during development. Compare changes using the same data, viewport, and interaction; keep the simpler design only if it preserves the needed component contract and improves the measured case.
 
-  // Use Vue DevTools instead for accurate counts
-  console.log('Check Vue DevTools Components tab for instance counts')
-})
-```
+## Sources
 
-## Alternatives to Wrapper Components
-
-```vue
-<!-- Instead of a <Button> component for styling: -->
-<button class="btn btn-primary">Click</button>
-
-<!-- Instead of a <Text> component: -->
-<span class="text-body">{{ content }}</span>
-
-<!-- Instead of layout wrapper components in lists: -->
-<div class="flex items-center gap-2">
-  <!-- content -->
-</div>
-
-<!-- Use CSS classes or Tailwind instead of component abstractions for styling -->
-```
-
-## Impact Calculation
-
-| List Size | Components per Item | Total Instances | Memory Impact |
-|-----------|---------------------|-----------------|---------------|
-| 100 items | 1 (flat) | 100 | Baseline |
-| 100 items | 3 (nested) | 300 | ~3x memory |
-| 100 items | 5 (deeply nested) | 500 | ~5x memory |
-| 1000 items | 1 (flat) | 1000 | High |
-| 1000 items | 5 (deeply nested) | 5000 | Very High |
+- [Vue: Performance — Avoid Unnecessary Component Abstractions](https://vuejs.org/guide/best-practices/performance.html#avoid-unnecessary-component-abstractions) — cost of component instances and the trade-off with abstractions.
+- [Vue: Performance — Profiling Options](https://vuejs.org/guide/best-practices/performance.html#profiling-options) — Vue DevTools, browser profiling, and performance markers.
+- [Vue: Performance — Virtualize Large Lists](https://vuejs.org/guide/best-practices/performance.html#virtualize-large-lists) — reducing the number of mounted list items.

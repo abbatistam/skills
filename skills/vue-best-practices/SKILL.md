@@ -1,6 +1,6 @@
 ---
 name: vue-best-practices
-description: MUST be used for Vue.js tasks. Strongly recommends Composition API with `<script setup>` and TypeScript as the standard approach. Covers Vue 3, SSR, Volar, vue-tsc. Load for any Vue, .vue files, Vue Router, Pinia, or Vite with Vue work. ALWAYS use Composition API unless the project explicitly requires Options API.
+description: Vue 3 development guidance. Prefer Composition API with `<script setup>` for new full-application SFC work when it fits the project; preserve existing Options API and JavaScript conventions. Covers Vue fundamentals, SSR, TypeScript, and performance. Use for Vue-specific implementation or review tasks.
 license: MIT
 metadata:
   author: github.com/vuejs-ai
@@ -9,7 +9,7 @@ metadata:
 
 # Vue Best Practices Workflow
 
-Use this skill as an instruction set. Follow the workflow in order unless the user explicitly asks for a different order.
+Use this skill as an instruction set. Follow the workflow in order unless the user explicitly asks for a different order or repository conventions require an adaptation.
 
 ## Core Principles
 - **Keep state predictable:** one source of truth, derive everything else.
@@ -18,20 +18,17 @@ Use this skill as an instruction set. Follow the workflow in order unless the us
 - **Avoid unnecessary re-renders:** use computed properties and watchers wisely.
 - **Readability counts:** write clear, self-documenting code.
 
-## 1) Confirm architecture before coding (required)
+## 1) Confirm architecture before coding
 
-- Default stack: Vue 3 + Composition API + `<script setup lang="ts">`.
-- If the project explicitly uses Options API, load `vue-options-api-best-practices` skill if available.
+- For new components in full Vue applications using SFCs and build tooling, prefer Vue 3 + Composition API + `<script setup>`. Vue also fully supports Options API; preserve the style of existing code when making local changes.
+- Use TypeScript when the project already uses it or the user requests it. Do not migrate JavaScript files solely because this skill is active.
+- If the affected code uses Options API, load `vue-options-api-best-practices` skill if available.
 - If the project explicitly uses JSX, load `vue-jsx-best-practices` skill if available.
 
-### 1.1 Must-read core references (required)
+### 1.1 Consult the relevant core references
 
-- Before implementing any Vue task, make sure to read and apply these core references:
-  - `references/reactivity.md`
-  - `references/sfc.md`
-  - `references/component-data-flow.md`
-  - `references/composables.md`
-- Keep these references in active working context for the entire task, not only when a specific issue appears.
+- For non-trivial changes, consult the references that match the affected behavior: `references/reactivity.md`, `references/sfc.md`, `references/component-data-flow.md`, and `references/composables.md`.
+- For a local fix, read only the relevant reference and preserve unrelated project conventions.
 
 ### 1.2 Plan component boundaries before coding (required)
 
@@ -42,9 +39,9 @@ For a non-trivial feature or structural refactor, sketch responsibilities, state
 - Let root/route components compose features and coordinate page behavior. Apply the same responsibility review inside feature components and composables; moving a whole feature to a child or a `useFeature()` function is not sufficient decomposition.
 - Follow the project's layout and scale the design to the affected behavior. A local fix does not require a project-wide component map or new architectural layers.
 
-## 2) Apply essential Vue foundations (required)
+## 2) Apply the relevant Vue foundations
 
-These are essential, must-know foundations. Apply all of them in every Vue task using the core references already loaded in section `1.1`.
+Use these foundations where they apply to the task; do not force unrelated refactors into a focused change.
 
 ### Reactivity
 
@@ -124,7 +121,7 @@ Performance work is a post-functionality pass. Do not optimize before core behav
 ## 5) Final self-check before finishing
 
 - Core behavior works and matches requirements.
-- All must-read references were read and applied.
+- The relevant references and official APIs were consulted for the changed behavior.
 - Reactivity model is minimal and predictable.
 - SFC structure and template rules are followed.
 - Both sides of the boundary review pass: substantial separable responsibilities are not still concentrated in one implementation, and extracted units hide useful complexity rather than merely forward it.
@@ -133,3 +130,12 @@ Performance work is a post-functionality pass. Do not optimize before core behav
 - Refactors preserve existing behavior, including pending work and cross-feature operations. Use the project's applicable tests; API or file-size reductions alone are not evidence of success.
 - Optional features are used only when requirements demand them.
 - Performance changes were applied only after functionality was complete.
+
+## Primary references
+
+- [Vue Guide](https://vuejs.org/guide/introduction.html) — framework concepts and the Composition / Options API styles.
+- [Vue: Which API Style to Choose](https://vuejs.org/guide/introduction.html#which-to-choose) — both API styles, and Vue's recommendation for full applications using SFCs and build tooling.
+- [Vue: Reactivity Fundamentals](https://vuejs.org/guide/essentials/reactivity-fundamentals.html) and [Computed Properties](https://vuejs.org/guide/essentials/computed.html) — reactive state and derived values.
+- [Vue: Single-File Components](https://vuejs.org/guide/scaling-up/sfc.html) — SFC structure and `<script setup>`.
+- [Vue: TypeScript with Composition API](https://vuejs.org/guide/typescript/composition-api.html) — typed props, emits, provide/inject, and template refs.
+- [Vue: Performance](https://vuejs.org/guide/best-practices/performance.html) — profiling and evidence-based optimization.

@@ -1,38 +1,25 @@
 ---
 title: TransitionGroup Component Best Practices
 impact: MEDIUM
-impactDescription: TransitionGroup animates list items; missing keys or misuse leads to broken list transitions
+impactDescription: TransitionGroup animates list items as they enter, leave, or move; stable item identity is important for correct updates
 type: best-practice
 tags: [vue3, transition-group, animation, lists, keys]
 ---
 
 # TransitionGroup Component Best Practices
 
-**Impact: MEDIUM** - `<TransitionGroup>` animates lists of items entering, leaving, and moving. Use it for `v-for` lists or dynamic collections where individual items change over time.
+Use `<TransitionGroup>` when elements in a list are inserted, removed, or moved. Unlike `<Transition>`, its children must have unique keys. In Vue 3 it renders no wrapper by default; set `tag` when the list needs a semantic or styled container.
 
 ## Task List
 
-- Use `<TransitionGroup>` only for lists and repeated items
-- Provide unique, stable keys for every direct child
-- Use `tag` when you need semantic or layout wrappers
-- Avoid the `mode` prop (not supported)
-- Use JavaScript hooks for staggered effects
+- Use `<TransitionGroup>` for list transitions; use `<Transition>` for a single changing child
+- Give each repeated item a stable, unique key
+- Set `tag` when the list needs a semantic or styled wrapper element
+- Use CSS transition classes for simple enter, leave, or move effects
+- Use JavaScript hooks when CSS alone cannot express the required sequence
 
-## Use TransitionGroup for Lists
+## Animate List Changes
 
-`<TransitionGroup>` is designed for list items. Use `tag` to control the wrapper element when needed.
-
-**BAD:**
-```vue
-<template>
-  <TransitionGroup name="fade">
-    <ComponentA />
-    <ComponentB />
-  </TransitionGroup>
-</template>
-```
-
-**GOOD:**
 ```vue
 <template>
   <TransitionGroup name="list" tag="ul">
@@ -41,88 +28,38 @@ tags: [vue3, transition-group, animation, lists, keys]
     </li>
   </TransitionGroup>
 </template>
-```
 
-## Always Provide Stable Keys
-
-Keys are required. Without stable keys, Vue cannot track item positions and animations break.
-
-**BAD:**
-```vue
-<template>
-  <TransitionGroup name="list" tag="ul">
-    <li v-for="(item, index) in items" :key="index">
-      {{ item.name }}
-    </li>
-  </TransitionGroup>
-</template>
-```
-
-**GOOD:**
-```vue
-<template>
-  <TransitionGroup name="list" tag="ul">
-    <li v-for="item in items" :key="item.id">
-      {{ item.name }}
-    </li>
-  </TransitionGroup>
-</template>
-```
-
-## Do Not Use `mode` on TransitionGroup
-
-`mode` is only for `<Transition>` because it swaps a single element. Use `<Transition>` if you need in/out sequencing.
-
-**BAD:**
-```vue
-<template>
-  <TransitionGroup name="list" tag="div" mode="out-in">
-    <div v-for="item in items" :key="item.id">{{ item.name }}</div>
-  </TransitionGroup>
-</template>
-```
-
-**GOOD:**
-```vue
-<template>
-  <Transition name="fade" mode="out-in">
-    <component :is="currentView" :key="currentView" />
-  </Transition>
-</template>
-```
-
-## Stagger List Animations with Data Attributes
-
-For cascading list animations, pass the index to JavaScript hooks and compute delay per item.
-
-```vue
-<script setup>
-function onBeforeEnter(el) {
-  el.style.opacity = 0
-  el.style.transform = 'translateY(12px)'
+<style scoped>
+.list-enter-active,
+.list-leave-active {
+  transition: opacity 180ms ease;
 }
 
-function onEnter(el, done) {
-  const delay = Number(el.dataset.index) * 80
-  setTimeout(() => {
-    el.style.transition = 'all 0.25s ease'
-    el.style.opacity = 1
-    el.style.transform = 'translateY(0)'
-    setTimeout(done, 250)
-  }, delay)
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
 }
-</script>
 
-<template>
-  <TransitionGroup
-    tag="ul"
-    :css="false"
-    @before-enter="onBeforeEnter"
-    @enter="onEnter"
-  >
-    <li v-for="(item, index) in items" :key="item.id" :data-index="index">
-      {{ item.name }}
-    </li>
-  </TransitionGroup>
-</template>
+.list-move {
+  transition: transform 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-enter-active,
+  .list-leave-active,
+  .list-move {
+    transition: none;
+  }
+}
+</style>
 ```
+
+Use a key based on the item's identity, such as `item.id`, rather than its current array index when items can be reordered or removed. Vue uses keys to track which item is entering, leaving, or moving.
+
+`<TransitionGroup>` has no `mode` prop. If a view swap needs out-in or in-out sequencing, use `<Transition>` around that single view instead.
+
+## Sources
+
+- [Vue: TransitionGroup](https://vuejs.org/guide/built-ins/transition-group.html) — list transitions, unique keys, wrapper tags, move classes, and JavaScript hooks.
+- [Vue: Transition](https://vuejs.org/guide/built-ins/transition.html) — single-child transitions and transition modes.
+- [MDN: `prefers-reduced-motion`](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion) — reduced-motion media query.

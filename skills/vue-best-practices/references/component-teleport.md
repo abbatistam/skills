@@ -17,6 +17,7 @@ tags: [vue3, teleport, modal, overlay, positioning, responsive]
 - Use `:disabled` for responsive layouts that should render inline on small screens
 - Remember props, emits, and provide/inject still work through teleport
 - Avoid relying on parent stacking contexts or transforms for teleported UI
+- Ensure the target exists when Teleport mounts; use `defer` only when supported and needed
 
 ## Teleport Overlays Out of Transformed Containers
 
@@ -41,7 +42,7 @@ When an ancestor has `transform`, `filter`, or `perspective`, fixed-position ove
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  /* Use the application's overlay layer scale. */
 }
 </style>
 ```
@@ -58,6 +59,8 @@ When an ancestor has `transform`, `filter`, or `perspective`, fixed-position ove
   </div>
 </template>
 ```
+
+The `to` target must exist when the Teleport mounts. In Vue 3.5+, `defer` can postpone target resolution until later in the same mount/update tick; it does not wait for a target created asynchronously afterward.
 
 ## Responsive Layouts with `disabled`
 
@@ -106,3 +109,7 @@ Teleports to the same target append in declaration order:
 ```
 
 Use a shared container to keep stacking predictable, and apply z-index only when you need explicit layering.
+
+## Sources
+
+- [Vue: Teleport](https://vuejs.org/guide/built-ins/teleport.html) — target requirements, disabled/deferred Teleport, multiple targets, and preserved component hierarchy.

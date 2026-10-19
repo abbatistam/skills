@@ -204,3 +204,10 @@ For development best practices and common gotchas, use `vue-best-practices`.
 - App configuration methods not working after mount call → See [configure-app-before-mount](reference/configure-app-before-mount.md)
 - Chaining app config off mount() fails because mount returns component instance → See [mount-return-value](reference/mount-return-value.md)
 - require.context-based component auto-registration fails in Vite → See [dynamic-component-registration-vite](reference/dynamic-component-registration-vite.md)
+
+## Primary references
+
+- [Vue: Error Handling](https://vuejs.org/api/composition-api-lifecycle.html#onerrorcaptured) — errors captured from descendant components.
+- [Vue: Lifecycle Hooks](https://vuejs.org/guide/essentials/lifecycle.html) — component lifecycle timing and hook registration.
+- [Vue: SSR — Hydration Mismatch](https://vuejs.org/guide/scaling-up/ssr.html#hydration-mismatch) — common hydration causes and remedies.
+- [Vue: Template Refs](https://vuejs.org/guide/essentials/template-refs.html) — DOM and component refs, including their availability timing.

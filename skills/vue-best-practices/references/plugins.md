@@ -35,12 +35,18 @@ app.use(notAPlugin)
 
 **GOOD:**
 ```ts
-import type { App } from 'vue'
+import type { App, InjectionKey } from 'vue'
 
 interface PluginOptions {
   prefix?: string
   debug?: boolean
 }
+
+interface MyPluginApi {
+  prefix: string
+}
+
+const myPluginKey: InjectionKey<MyPluginApi> = Symbol('myPlugin')
 
 const myPlugin = {
   install(app: App, options: PluginOptions = {}) {
@@ -50,7 +56,7 @@ const myPlugin = {
       console.log('Installing myPlugin with prefix:', prefix)
     }
 
-    app.provide('myPlugin', { prefix })
+    app.provide(myPluginKey, { prefix })
   }
 }
 
@@ -100,11 +106,13 @@ const usefulPlugin = {
 Use Vue's `Plugin` type to keep install signatures and options type-safe.
 
 ```ts
-import type { App, Plugin } from 'vue'
+import type { App, InjectionKey, Plugin } from 'vue'
 
 interface MyOptions {
   apiKey: string
 }
+
+const apiKeyKey: InjectionKey<string> = Symbol('apiKey')
 
 const myPlugin: Plugin<[MyOptions]> = {
   install(app: App, options: MyOptions) {
@@ -164,3 +172,10 @@ export function useAuth(): AuthService {
   return auth
 }
 ```
+
+## Sources
+
+- [Vue: Plugins](https://vuejs.org/guide/reusability/plugins.html) — plugin installation contract and app-level capabilities.
+- [Vue: Application API — `app.use()`](https://vuejs.org/api/application.html#app-use) — plugin installation behavior.
+- [Vue: Provide / Inject](https://vuejs.org/guide/components/provide-inject.html) — symbol keys and typed injection contracts.
+- [Vue: TypeScript with Composition API — Provide / Inject](https://vuejs.org/guide/typescript/composition-api.html#typing-provide-inject) — `InjectionKey<T>`.

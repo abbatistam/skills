@@ -32,9 +32,9 @@ const vFocus = {
 }
 ```
 
-## Avoid Directives on Components
+## Avoid Applying Directives to Component Tags
 
-Directives apply to DOM elements. When used on components, they attach to the root element and can break if the root changes.
+Vue does not recommend applying custom directives to component tags: they are applied to the component's root node, and a multi-root component ignores the directive and emits a warning. Put the directive on the intended DOM element inside the component when you control that template.
 
 **BAD:**
 ```vue
@@ -108,20 +108,22 @@ export const vHighlight = {
 ```ts
 import type { Directive } from 'vue'
 
-type HighlightValue = string
+type HighlightDirective = Directive<HTMLElement, string>
 
 export const vHighlight = {
   mounted(el, binding) {
     el.style.backgroundColor = binding.value
   }
-} satisfies Directive<HTMLElement, HighlightValue>
+} satisfies HighlightDirective
 
 declare module 'vue' {
-  interface ComponentCustomProperties {
-    vHighlight: typeof vHighlight
+  interface GlobalDirectives {
+    vHighlight: HighlightDirective
   }
 }
 ```
+
+Augment `GlobalDirectives` when the directive is registered with `app.directive()` and should be recognized across templates. Vue's current TypeScript guide uses this interface for global directive type hints.
 
 ## Handle SSR with `getSSRProps`
 
@@ -160,3 +162,9 @@ If a standard attribute or binding works, use it instead of a directive.
 ## Decide Between Directives and Components
 
 Use a directive for DOM-level behavior. Use a component when behavior affects structure, state, or rendering.
+
+## Sources
+
+- [Vue: Custom Directives](https://vuejs.org/guide/reusability/custom-directives.html) — intended use, hooks, read-only binding arguments, function shorthand, and component-tag caveats.
+- [Vue: TypeScript with Composition API — Global Custom Directives](https://vuejs.org/guide/typescript/composition-api.html#typing-global-custom-directives) — `Directive` typing and `GlobalDirectives` augmentation.
+- [Vue: SSR](https://vuejs.org/guide/scaling-up/ssr.html#custom-directives) — `getSSRProps` when a directive must contribute attributes to server-rendered HTML.

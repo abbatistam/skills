@@ -1,26 +1,27 @@
 ---
-title: Vue Router Navigation Guard next() Function Deprecated
-impact: HIGH
-impactDescription: Using the deprecated next() function incorrectly causes navigation to hang, infinite loops, or silent failures
+title: Prefer Return-based Vue Router Navigation Guards
+impact: MEDIUM
+impactDescription: Return-based guards are easier to reason about, while callback-based next() remains supported and is needed for beforeRouteEnter instance callbacks
 type: gotcha
 tags: [vue3, vue-router, navigation-guards, migration, async]
 ---
 
-# Vue Router Navigation Guard next() Function Deprecated
+# Prefer Return-based Vue Router Navigation Guards
 
-**Impact: HIGH** - The third `next()` argument in navigation guards is deprecated in Vue Router 4. While still supported for backward compatibility, using it incorrectly is one of the most common sources of bugs: calling it multiple times, forgetting to call it, or calling it conditionally without proper logic.
+**Impact: MEDIUM** - Prefer return-based guards for ordinary allow, cancel, and redirect decisions. Vue Router still supports the third `next()` argument, but marks its callback API deprecated and requires exactly one call on every path. Do not remove the `next(vm => ...)` callback from `beforeRouteEnter` when code needs the entering component instance: that guard runs before the instance exists, and it is the only guard that supports this callback.
 
 ## Task Checklist
 
-- [ ] Refactor guards to use return-based syntax instead of next()
-- [ ] Remove all next() calls from navigation guards
+- [ ] Prefer return-based syntax for ordinary allow, cancel, and redirect decisions
+- [ ] If retaining the third `next` argument, call it exactly once on every path
+- [ ] Keep `next(vm => ...)` in `beforeRouteEnter` when the entering component instance is required
 - [ ] Use async/await pattern for asynchronous checks
 - [ ] Return false to cancel, return route to redirect, return nothing to proceed
 
 ## The Problem
 
 ```javascript
-// WRONG: Using deprecated next() function
+// LEGACY STYLE: Prefer a return-based guard for this decision
 router.beforeEach((to, from, next) => {
   if (!isAuthenticated) {
     next('/login')  // Easy to forget this call
@@ -95,9 +96,21 @@ router.beforeEach((to, from) => {
 })
 ```
 
-## If You Must Use next() (Legacy Code)
+## Retaining the Callback API
 
-If maintaining legacy code that uses `next()`, follow these rules strictly:
+The third `next` argument is still supported. When a guard uses it, call it exactly once in every possible path. In `beforeRouteEnter`, its callback form is the documented way to access the entering component instance after navigation is confirmed:
+
+```javascript
+const UserDetails = {
+  beforeRouteEnter(to, from, next) {
+    next((vm) => {
+      vm.loadUser(to.params.id)
+    })
+  },
+}
+```
+
+For guards that do not need that callback, return-based control flow usually makes the result clearer. If retaining `next`, follow this control-flow pattern:
 
 ```javascript
 // CORRECT: Exactly one next() call per code path
@@ -139,12 +152,13 @@ router.beforeEach(async (to, from) => {
 
 ## Key Points
 
-1. **Prefer return-based syntax** - Cleaner, less error-prone, modern standard
-2. **next() must be called exactly once** - If using legacy syntax, ensure single call per path
-3. **Always return/exit after redirect** - Prevent multiple navigation actions
-4. **Async guards work naturally** - Just return the redirect route or nothing
-5. **Test all code paths** - Each branch must result in either return or next()
+1. **Prefer return-based syntax** - It makes allow, cancel, and redirect outcomes explicit
+2. **The third `next` argument is still supported but deprecated in the current API reference** - If used, call it exactly once per path
+3. **Keep the `beforeRouteEnter` callback when needed** - It runs after navigation confirmation with the entering component instance
+4. **Async guards work with either style** - Return a redirect or nothing; if using `next`, guard against calling it more than once
+5. **Test all code paths** - Every branch must resolve the navigation exactly once
 
 ## Reference
-- [Vue Router Navigation Guards](https://router.vuejs.org/guide/advanced/navigation-guards.html)
+- [Vue Router Navigation Guards](https://router.vuejs.org/guide/advanced/navigation-guards.html) — return-based guard outcomes, continued support for the optional `next` argument, and the callback exception for `beforeRouteEnter`.
+- [Vue Router API: `NavigationGuardNext`](https://router.vuejs.org/api/interfaces/navigationguardnext) — currently marks the callback API deprecated and says it will be removed in a future version.
 - [RFC: Remove next() from Navigation Guards](https://github.com/vuejs/rfcs/discussions/302)

@@ -1,187 +1,85 @@
 ---
-title: Avoid Expensive Operations in Updated Hook
+title: Use Updated Hooks for Post-DOM Work
 impact: MEDIUM
-impactDescription: Heavy computations in updated hook cause performance bottlenecks and potential infinite loops
+impactDescription: Updated hooks run after a component's DOM patch and can repeat work on unrelated renders
 type: capability
-tags: [vue3, vue2, lifecycle, updated, performance, optimization, reactivity]
+tags: [vue3, vue2, lifecycle, updated, performance, reactivity, optimization]
 ---
 
-# Avoid Expensive Operations in Updated Hook
+# Use Updated Hooks for Post-DOM Work
 
-**Impact: MEDIUM** - The `updated` hook runs after every reactive state change that causes a re-render. Placing expensive operations, API calls, or state mutations here can cause severe performance degradation, infinite loops, and dropped frames below the optimal 60fps threshold.
-
-Use `updated`/`onUpdated` sparingly for post-DOM-update operations that cannot be handled by watchers or computed properties. For most reactive data handling, prefer watchers (`watch`/`watchEffect`) which provide more control over what triggers the callback.
+`updated` / `onUpdated()` runs after a component has updated its DOM. Use it for work that specifically needs the patched DOM, such as synchronizing an imperative third-party widget. It is not a general-purpose listener for a particular state change: the hook does not identify which dependency caused the render, and it can run after unrelated updates.
 
 ## Task List
 
-- Never perform API calls in updated hook
-- Never mutate reactive state inside updated (causes infinite loops)
-- Use conditional checks to verify updates are relevant before acting
-- Prefer `watch` or `watchEffect` for reacting to specific data changes
-- Use throttling/debouncing if updated operations are expensive
-- Reserve updated for low-level DOM synchronization tasks
+- Use `watch()` for side effects tied to specific reactive sources
+- Use `computed()` for derived values
+- Use `updated` / `onUpdated()` only when the component's DOM has to be read or synchronized after a patch
+- Avoid unconditional changes to render-affecting state in the hook, which can create repeated updates
+- Keep DOM work idempotent and measure it if it runs on a frequently updated component
 
-**BAD:**
-```javascript
-// BAD: API call in updated - fires on every re-render
-export default {
-  data() {
-    return { items: [], lastUpdate: null }
-  },
-  updated() {
-    // This runs after every single state change!
-    fetch('/api/sync', {
-      method: 'POST',
-      body: JSON.stringify(this.items)
-    })
-  }
-}
+## Watch the State That Owns the Side Effect
+
+For an API call that should follow a specific value, watch that value rather than issuing the request after every render. If the request can be superseded, cancel or ignore stale work with the watcher's cleanup callback.
+
+```ts
+import { ref, watch } from 'vue'
+
+const query = ref('')
+const results = ref<string[]>([])
+
+watch(query, async (value, _previous, onCleanup) => {
+  const controller = new AbortController()
+  onCleanup(() => controller.abort())
+
+  const response = await fetch(`/api/search?q=${encodeURIComponent(value)}`, {
+    signal: controller.signal
+  })
+  results.value = await response.json()
+})
 ```
 
-```javascript
-// BAD: State mutation in updated - infinite loop
-export default {
-  data() {
-    return { renderCount: 0 }
-  },
-  updated() {
-    // This causes another update, which triggers updated again!
-    this.renderCount++ // Infinite loop
-  }
-}
+## Use Computed for Derived Data
+
+```ts
+import { computed, ref } from 'vue'
+
+const numbers = ref([1, 2, 3, 4, 5])
+const sum = computed(() => numbers.value.reduce((total, value) => total + value, 0))
 ```
 
-```javascript
-// BAD: Heavy computation on every update
-export default {
-  updated() {
-    // Expensive operation runs on every keystroke, every state change
-    this.processedData = this.heavyComputation(this.rawData)
-    this.analytics = this.calculateMetrics(this.allData)
-  }
-}
-```
+Do not assign a derived value in `updated`; that duplicates state and can schedule another render. Keep the source state and derive the value declaratively.
 
-**GOOD:**
-```javascript
-import debounce from 'lodash-es/debounce'
+## Synchronize Work That Needs the Patched DOM
 
-// GOOD: Use watcher for specific data changes
-export default {
-  data() {
-    return { items: [] }
-  },
-  watch: {
-    // Only fires when items actually changes
-    items: {
-      handler(newItems) {
-        this.syncToServer(newItems)
-      },
-      deep: true
-    }
-  },
-  methods: {
-    syncToServer: debounce(function(items) {
-      fetch('/api/sync', {
-        method: 'POST',
-        body: JSON.stringify(items)
-      })
-    }, 500)
-  }
-}
-```
+Use `onUpdated()` when an imperative library must be notified after Vue patches the component's DOM. Keep the operation safe to run whenever the component updates, or track the relevant source with `watch()` and use a post-flush watcher when the DOM must already be updated.
 
 ```vue
-<!-- GOOD: Composition API with targeted watchers -->
-<script setup>
-import { ref, watch, onUpdated } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
+<template>
+  <div ref="chart-root"></div>
+</template>
 
-const items = ref([])
-const scrollContainer = ref(null)
+<script setup lang="ts">
+import { onUpdated, useTemplateRef } from 'vue'
 
-// Watch specific data - not all updates
-watch(items, (newItems) => {
-  syncToServer(newItems)
-}, { deep: true })
+// useTemplateRef() requires Vue 3.5+. Initialize chartInstance with the
+// imperative library used by the application.
+const chartRoot = useTemplateRef<HTMLElement>('chart-root')
 
-const syncToServer = useDebounceFn((items) => {
-  fetch('/api/sync', { method: 'POST', body: JSON.stringify(items) })
-}, 500)
-
-// Only use onUpdated for DOM synchronization
 onUpdated(() => {
-  // Scroll to bottom only if content changed height
-  if (scrollContainer.value) {
-    scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight
-  }
+  if (chartRoot.value) chartInstance.resize(chartRoot.value)
 })
 </script>
 ```
 
-```javascript
-// GOOD: Conditional check in updated hook
-export default {
-  data() {
-    return {
-      content: '',
-      lastSyncedContent: ''
-    }
-  },
-  updated() {
-    // Only act if specific condition is met
-    if (this.content !== this.lastSyncedContent) {
-      this.syncContent()
-      this.lastSyncedContent = this.content
-    }
-  },
-  methods: {
-    syncContent: debounce(function() {
-      // Sync logic
-    }, 300)
-  }
-}
-```
+For Vue versions before 3.5, declare `const chartRoot = ref<HTMLElement | null>(null)` and use a matching `ref="chartRoot"` template attribute.
 
-## Valid Use Cases for Updated Hook
+If the operation changes reactive state that affects this component's render, guard it so it settles; otherwise it can cause an update loop. Do not use a fixed frame-rate threshold as a substitute for measuring the actual work.
 
-```javascript
-// GOOD: Low-level DOM synchronization
-export default {
-  updated() {
-    // Sync third-party library with Vue's DOM
-    this.thirdPartyWidget.refresh()
+## Sources
 
-    // Update scroll position after content change
-    this.$nextTick(() => {
-      this.maintainScrollPosition()
-    })
-  }
-}
-```
-
-## Prefer Computed Properties for Derived Data
-
-```javascript
-// BAD: Calculating derived data in updated
-export default {
-  data() {
-    return { numbers: [1, 2, 3, 4, 5] }
-  },
-  updated() {
-    this.sum = this.numbers.reduce((a, b) => a + b, 0) // Causes another update!
-  }
-}
-
-// GOOD: Use computed property instead
-export default {
-  data() {
-    return { numbers: [1, 2, 3, 4, 5] }
-  },
-  computed: {
-    sum() {
-      return this.numbers.reduce((a, b) => a + b, 0)
-    }
-  }
-}
-```
+- [Vue: Lifecycle Hooks API — `onUpdated()`](https://vuejs.org/api/composition-api-lifecycle.html#onupdated) — callback timing and the warning about mutating component state from the hook.
+- [Vue: Options Lifecycle — `updated`](https://vuejs.org/api/options-lifecycle.html#updated) — Options API equivalent.
+- [Vue: Watchers — Side Effect Cleanup](https://vuejs.org/guide/essentials/watchers.html#side-effect-cleanup) — cancelling or cleaning up watcher effects.
+- [Vue: Watchers — Callback Flush Timing](https://vuejs.org/guide/essentials/watchers.html#callback-flush-timing) — post-flush watchers for work that needs updated DOM.
+- [Vue: Computed Properties](https://vuejs.org/guide/essentials/computed.html) — derived state.

@@ -255,3 +255,10 @@ export function useInvoiceSummary(invoiceRef) {
   return { totalLabel }
 }
 ```
+
+## Sources
+
+- [Vue: Composables](https://vuejs.org/guide/reusability/composables.html) — reusable stateful logic, return conventions, and lifecycle-bound side effects.
+- [Vue: Watchers](https://vuejs.org/guide/essentials/watchers.html#side-effect-cleanup) — cleanup for asynchronous watcher effects.
+- [Vue: Reactivity API — `readonly()`](https://vuejs.org/api/reactivity-core.html#readonly) — readonly reactive proxies.
+- [Vue: Reactivity API — `shallowRef()`](https://vuejs.org/api/reactivity-advanced.html#shallowref) — shallow reactivity and root replacement.

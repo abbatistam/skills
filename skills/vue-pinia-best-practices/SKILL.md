@@ -19,3 +19,9 @@ Pinia best practices, common gotchas, and state management patterns.
 ### State Patterns
 - Filters reset on refresh or can't be shared → See [state-url-for-ephemeral-filters](reference/state-url-for-ephemeral-filters.md)
 - Building production app without DevTools or conventions → See [state-use-pinia-for-large-apps](reference/state-use-pinia-for-large-apps.md)
+
+## Primary references
+
+- [Pinia: Introduction](https://pinia.vuejs.org/introduction.html) — Pinia's role in the Vue ecosystem and its core concepts.
+- [Pinia: State](https://pinia.vuejs.org/core-concepts/state.html), [Getters](https://pinia.vuejs.org/core-concepts/getters.html), and [Actions](https://pinia.vuejs.org/core-concepts/actions.html) — defining and using store state and behavior.
+- [Pinia: Server-Side Rendering](https://pinia.vuejs.org/ssr/) — creating and hydrating request-scoped stores safely.

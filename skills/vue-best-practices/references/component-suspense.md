@@ -1,228 +1,109 @@
 ---
 title: Suspense Component Best Practices
 impact: MEDIUM
-impactDescription: Suspense coordinates async dependencies with fallback UI; misconfiguration leads to missing loading states or confusing UX
+impactDescription: Suspense coordinates async dependencies and fallback UI, but remains an experimental Vue feature
 type: best-practice
 tags: [vue3, suspense, async-components, async-setup, loading, fallback, router, transition, keepalive]
 ---
 
 # Suspense Component Best Practices
 
-**Impact: MEDIUM** - `<Suspense>` coordinates async dependencies (async components or async setup) and renders a fallback while they resolve. Misconfiguration leads to missing loading states, empty renders, or subtle UX bugs.
+`<Suspense>` coordinates async components and components with async `setup()` (including top-level `await` in `<script setup>`). It renders a fallback while its default slot's async dependencies resolve. Vue still documents `<Suspense>` as experimental, so check the current documentation and version before making it a foundational application contract.
 
 ## Task List
 
-- Wrap default and fallback slot content in a single root node
-- Use `timeout` when you need the fallback to appear on reverts
-- Force root replacement with `:key` when you need Suspense to re-trigger
-- Add `suspensible` to nested Suspense boundaries (Vue 3.3+)
-- Use `@pending`, `@resolve`, and `@fallback` for programmatic loading state
-- Nest `RouterView` -> `Transition` -> `KeepAlive` -> `Suspense` in that order
-- Keep Suspense usage centralized and documented in production
+- Give both the default and fallback slots one immediate child node
+- Handle async failures separately; `<Suspense>` does not provide its own error handling
+- Use `timeout` when a resolved boundary switches to new async content and fallback timing matters
+- Change the default slot's root identity only when a new async view should trigger a new pending state
+- Use nested `suspensible` boundaries only when their async work should be coordinated by a parent
+- Account for async component loading options being controlled by the nearest Suspense boundary
 
-## Single Root in Default and Fallback Slots
+## Initial Loading and Reverting to Pending
 
-Suspense tracks a single immediate child in both slots. Wrap multiple elements in a single element or component.
+On initial render, Vue evaluates the default slot. If it encounters async dependencies, it displays the fallback until they resolve. Both slots accept one immediate child, so group multiple nodes under an element or component.
 
-**BAD:**
 ```vue
 <template>
   <Suspense>
-    <AsyncHeader />
-    <AsyncList />
-
-    <template #fallback>
-      <LoadingSpinner />
-      <LoadingHint />
-    </template>
-  </Suspense>
-</template>
-```
-
-**GOOD:**
-```vue
-<template>
-  <Suspense>
-    <div>
+    <main>
       <AsyncHeader />
-      <AsyncList />
-    </div>
+      <AsyncDashboard />
+    </main>
 
     <template #fallback>
-      <div>
-        <LoadingSpinner />
-        <LoadingHint />
-      </div>
+      <p role="status">Loading dashboard…</p>
     </template>
   </Suspense>
 </template>
 ```
 
-## Fallback Timing on Reverts (`timeout`)
+After the boundary resolves, it returns to pending only when the default slot's root node is replaced. Async work deeper in the same root does not retrigger the fallback. When a new root is rendered, the old content remains visible until the new content resolves or `timeout` elapses; `timeout="0"` shows the fallback immediately on that revert.
 
-When Suspense is already resolved and new async work starts, the previous content remains visible until the timeout elapses. Use `timeout="0"` for immediate fallback or a short delay to avoid flicker.
-
-**BAD:**
-```vue
-<template>
-  <Suspense>
-    <component :is="currentView" :key="viewKey" />
-
-    <template #fallback>
-      Loading...
-    </template>
-  </Suspense>
-</template>
-```
-
-**GOOD:**
 ```vue
 <template>
   <Suspense :timeout="200">
-    <component :is="currentView" :key="viewKey" />
+    <component :is="currentView" :key="viewId" />
 
     <template #fallback>
-      Loading...
+      <p role="status">Loading view…</p>
     </template>
   </Suspense>
 </template>
 ```
 
-## Pending State Only Re-triggers on Root Replacement
+Use a changing `key` only when the new identity should make the boundary pending again. `timeout` does not change the initial pending behavior.
 
-Once resolved, Suspense only re-enters pending when the root node of the default slot changes. If async work happens deeper in the tree, no fallback appears.
+## Coordinate Nested Boundaries
 
-**BAD:**
-```vue
-<template>
-  <Suspense>
-    <TabContainer>
-      <AsyncDashboard v-if="tab === 'dashboard'" />
-      <AsyncSettings v-else />
-    </TabContainer>
+Nested `<Suspense>` boundaries are supported in Vue 3.3+. Add `suspensible` to a nested boundary when the parent should also wait for its async dependencies; without it, the nested boundary manages its own loading state.
 
-    <template #fallback>
-      Loading...
-    </template>
-  </Suspense>
-</template>
-```
-
-**GOOD:**
-```vue
-<template>
-  <Suspense>
-    <component :is="tabs[tab]" :key="tab" />
-
-    <template #fallback>
-      Loading...
-    </template>
-  </Suspense>
-</template>
-```
-
-## Use `suspensible` for Nested Suspense (Vue 3.3+)
-
-Nested Suspense boundaries need `suspensible` on the inner boundary so the parent can coordinate loading state. Without it, inner async content may render empty nodes until resolved.
-
-**BAD:**
-```vue
-<template>
-  <Suspense>
-    <LayoutShell>
-      <Suspense>
-        <AsyncWidget />
-        <template #fallback>Loading widget...</template>
-      </Suspense>
-    </LayoutShell>
-
-    <template #fallback>Loading layout...</template>
-  </Suspense>
-</template>
-```
-
-**GOOD:**
 ```vue
 <template>
   <Suspense>
     <LayoutShell>
       <Suspense suspensible>
         <AsyncWidget />
-        <template #fallback>Loading widget...</template>
+        <template #fallback>Loading widget…</template>
       </Suspense>
     </LayoutShell>
 
-    <template #fallback>Loading layout...</template>
+    <template #fallback>Loading page…</template>
   </Suspense>
 </template>
 ```
 
-## Track Loading with Suspense Events
+Async components are suspensible by default. Inside a Suspense boundary, that boundary controls their loading state and their `loadingComponent`, `errorComponent`, `delay`, and `timeout` options are ignored. Set `suspensible: false` in `defineAsyncComponent()` when the component should manage its own loading state.
 
-Use `@pending`, `@resolve`, and `@fallback` for analytics, global loading indicators, or coordinating UI outside the Suspense boundary.
+## Combine with Router, Transitions, and Cached Views
+
+When these wrappers are combined, Vue's documented nesting order is `RouterView` → `Transition` → `KeepAlive` → `Suspense`. Remove wrappers the application does not need.
 
 ```vue
-<script setup>
-import { ref } from 'vue'
-
-const isLoading = ref(false)
-
-const onPending = () => {
-  isLoading.value = true
-}
-
-const onResolve = () => {
-  isLoading.value = false
-}
-</script>
-
 <template>
-  <LoadingBar v-if="isLoading" />
-
-  <Suspense @pending="onPending" @resolve="onResolve">
-    <AsyncPage />
-    <template #fallback>
-      <PageSkeleton />
+  <RouterView v-slot="{ Component }">
+    <template v-if="Component">
+      <Transition mode="out-in">
+        <KeepAlive>
+          <Suspense>
+            <component :is="Component" />
+            <template #fallback>Loading route…</template>
+          </Suspense>
+        </KeepAlive>
+      </Transition>
     </template>
-  </Suspense>
-</template>
-```
-
-## Recommended Nesting with RouterView, Transition, KeepAlive
-
-When combining these components, the nesting order should be `RouterView` -> `Transition` -> `KeepAlive` -> `Suspense` so each wrapper works correctly.
-
-**BAD:**
-```vue
-<template>
-  <RouterView v-slot="{ Component }">
-    <Suspense>
-      <KeepAlive>
-        <Transition mode="out-in">
-          <component :is="Component" />
-        </Transition>
-      </KeepAlive>
-    </Suspense>
   </RouterView>
 </template>
 ```
 
-**GOOD:**
-```vue
-<template>
-  <RouterView v-slot="{ Component }">
-    <Transition mode="out-in">
-      <KeepAlive>
-        <Suspense>
-          <component :is="Component" />
-          <template #fallback>Loading...</template>
-        </Suspense>
-      </KeepAlive>
-    </Transition>
-  </RouterView>
-</template>
-```
+Vue Router's lazy route imports are separate from async components and do not themselves trigger Suspense; async descendants can still trigger it.
 
-## Treat Suspense Cautiously in Production
+## Track Loading and Handle Errors
 
-In production code, keep Suspense boundaries minimal, document where they are used, and have a fallback loading strategy if you ever need to replace or refactor them.
+The boundary emits `pending`, `resolve`, and `fallback` events. Use them when an outer loading indicator or instrumentation needs the boundary's state. Async errors need a separate error-capture strategy, such as `onErrorCaptured()` in an ancestor; the fallback slot handles pending work, not failures.
+
+## Sources
+
+- [Vue: Suspense](https://vuejs.org/guide/built-ins/suspense.html) — experimental status, async dependencies, slot constraints, timeout behavior, events, error handling, nesting order, and nested boundaries.
+- [Vue: Async Components](https://vuejs.org/guide/components/async.html#using-with-suspense) — interaction between `defineAsyncComponent` and Suspense.
+- [Vue Router: Lazy Loading Routes](https://router.vuejs.org/guide/advanced/lazy-loading.html) — route component imports and the distinction from async components.

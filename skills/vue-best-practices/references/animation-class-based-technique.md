@@ -1,21 +1,22 @@
 ---
 title: Use Class-based Animations for Non-Enter/Leave Effects
 impact: LOW
-impactDescription: Class-based animations are simpler and more performant for elements that remain in the DOM
+impactDescription: Class toggles let Vue state trigger CSS animations on elements that remain in the DOM
 type: best-practice
 tags: [vue3, animation, css, class-binding, state]
 ---
 
 # Use Class-based Animations for Non-Enter/Leave Effects
 
-**Impact: LOW** - For animations on elements that are not entering or leaving the DOM, use CSS class-based animations triggered by Vue's reactive state. This is simpler than `<Transition>` and more appropriate for feedback animations like shake, pulse, or highlight effects.
+**Impact: LOW** - For animations on elements that remain in the DOM, toggle a CSS class from reactive state. Use Vue's `<Transition>` for enter/leave effects and `<TransitionGroup>` for items inserted, removed, or moved in a list.
 
 ## Task List
 
 - Use class-based animations for elements staying in the DOM
-- Use `<Transition>` only for enter/leave animations
+- Use `<Transition>` for enter/leave animations and `<TransitionGroup>` for list changes
 - Combine CSS animations with Vue's class bindings (`:class`)
-- Consider using `setTimeout` to auto-remove animation classes
+- Prefer the `animationend` event to remove a class when its CSS animation finishes; handle the event only on the animated element
+- Respect the user's reduced-motion preference for nonessential motion
 
 **When to Use Class-based Animations:**
 - User feedback (shake on error, pulse on success)
@@ -41,16 +42,15 @@ function submitForm() {
     // Trigger shake animation
     showError.value = true
 
-    // Auto-remove class after animation completes
-    setTimeout(() => {
-      showError.value = false
-    }, 820)  // Match animation duration
   }
 }
 </script>
 
 <template>
-  <div :class="{ shake: showError }">
+  <div
+    :class="{ shake: showError }"
+    @animationend.self="showError = false"
+  >
     <button @click="submitForm">Submit</button>
     <span v-if="showError">This feature is disabled!</span>
   </div>
@@ -59,14 +59,13 @@ function submitForm() {
 <style>
 .shake {
   animation: shake 0.82s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-  transform: translate3d(0, 0, 0);  /* Enable GPU acceleration */
 }
 
 @keyframes shake {
-  10%, 90% { transform: translate3d(-1px, 0, 0); }
-  20%, 80% { transform: translate3d(2px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-  40%, 60% { transform: translate3d(4px, 0, 0); }
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
 }
 </style>
 ```
@@ -84,13 +83,13 @@ const saved = ref(false)
 async function save() {
   await saveData()
   saved.value = true
-  setTimeout(() => saved.value = false, 1000)
 }
 </script>
 
 <template>
   <button
     @click="save"
+    @animationend.self="saved = false"
     :class="{ pulse: saved }"
   >
     {{ saved ? 'Saved!' : 'Save' }}
@@ -120,13 +119,13 @@ const justUpdated = ref(false)
 
 watch(value, () => {
   justUpdated.value = true
-  setTimeout(() => justUpdated.value = false, 1000)
 })
 </script>
 
 <template>
   <div
     :class="{ highlight: justUpdated }"
+    @animationend.self="justUpdated = false"
   >
     Value: {{ value }}
   </div>
@@ -161,7 +160,7 @@ function notifyUser() {
 <template>
   <div
     :class="{ bounce: needsAttention }"
-    @animationend="needsAttention = false"
+    @animationend.self="needsAttention = false"
   >
     <BellIcon />
   </div>
@@ -198,57 +197,31 @@ function triggerAnimation() {
 <template>
   <div
     :class="{ animate: isAnimating }"
-    @animationend="isAnimating = false"
+    @animationend.self="isAnimating = false"
   >
     Content
   </div>
 </template>
 ```
 
-## Composable for Reusable Animations
+`transform` can be efficient to animate, but it does not guarantee GPU acceleration in every browser. Avoid adding `will-change` preemptively; profile the actual animation and target devices. Consider a reduced-motion alternative for nonessential motion:
 
-```javascript
-// composables/useAnimation.js
-import { ref } from 'vue'
-
-export function useAnimation(duration = 500) {
-  const isAnimating = ref(false)
-
-  function trigger() {
-    isAnimating.value = true
-    setTimeout(() => {
-      isAnimating.value = false
-    }, duration)
-  }
-
-  return {
-    isAnimating,
-    trigger
+```css
+@media (prefers-reduced-motion: reduce) {
+  .shake,
+  .pulse,
+  .highlight,
+  .bounce {
+    animation: none;
   }
 }
 ```
 
-```vue
-<script setup>
-import { useAnimation } from '@/composables/useAnimation'
 
-const shake = useAnimation(820)
-const pulse = useAnimation(500)
-</script>
+## Sources
 
-<template>
-  <button
-    :class="{ shake: shake.isAnimating.value }"
-    @click="shake.trigger()"
-  >
-    Shake me
-  </button>
-
-  <button
-    :class="{ pulse: pulse.isAnimating.value }"
-    @click="pulse.trigger()"
-  >
-    Pulse me
-  </button>
-</template>
-```
+- [Vue: Animation Techniques](https://vuejs.org/guide/extras/animation.html#class-based-animations) — class-based animations for elements that do not enter or leave the DOM.
+- [Vue: Transition](https://vuejs.org/guide/built-ins/transition.html) — when to use `<Transition>` and `<TransitionGroup>`, plus CSS animation behavior.
+- [Vue: Transition Performance Considerations](https://vuejs.org/guide/built-ins/transition.html#performance-considerations) — performance characteristics of `transform` and `opacity` compared with layout-triggering properties.
+- [MDN: `animationend`](https://developer.mozilla.org/en-US/docs/Web/API/Element/animationend_event) — event fired when a CSS animation completes.
+- [MDN: `prefers-reduced-motion`](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion) — CSS media query for a user's reduced-motion preference.

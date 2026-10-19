@@ -1,31 +1,31 @@
 ---
-title: Always Provide Unique Keys in v-for Loops
-impact: HIGH
-impactDescription: Missing or improper keys cause hard-to-debug bugs when list items have state, components, or animations
+title: Use Stable Keys When List Item Identity Matters
+impact: MEDIUM
+impactDescription: Unstable keys can move component or DOM state to the wrong item when a list changes
 type: gotcha
 tags: [vue3, v-for, list-rendering, key, state, components]
 ---
 
-# Always Provide Unique Keys in v-for Loops
+# Use Stable Keys When List Item Identity Matters
 
-**Impact: HIGH** - Without proper keys, Vue cannot track element identity when lists change. This causes component state loss, incorrect animations, form input values jumping between items, and bugs that are extremely difficult to debug.
+When Vue updates a `v-for` list, it uses an in-place patch strategy by default. Give items stable, unique primitive keys when the rendered content has component state, temporary DOM state, or identity-sensitive transitions. For simple stateless content, an unkeyed list can be sufficient; Vue's guide also permits intentionally relying on in-place patching for performance.
 
-The `key` attribute tells Vue how your data relates to the DOM elements it renders. When data ordering changes (via sort, filter, add, or remove), Vue uses keys to determine what to update, remove, or create. Without unique keys, Vue reuses DOM elements in-place which can cause one item's state to incorrectly appear on another item.
+The `key` attribute tells Vue how each rendered node maps to the data item. When items are inserted, removed, or reordered, stable keys let Vue preserve the correct component and DOM identity.
 
 ## Task Checklist
 
-- [ ] Always provide `:key` with unique, stable identifiers (database IDs, UUIDs)
-- [ ] Never use array index as key - indices shift when items are added/removed
+- [ ] Provide a unique, stable primitive `:key` when item identity or local state must follow an item (for example, a database ID)
+- [ ] Avoid an array index key when items can be inserted, removed, or reordered; indices can be appropriate for a static list with no identity-sensitive state
 - [ ] Use primitive values only (strings or numbers) - never use objects as keys
 - [ ] On `<template v-for>`, place the key on the `<template>` tag itself (Vue 3 change)
-- [ ] When using components in v-for, keys are mandatory, not optional
+- [ ] For component lists, provide stable keys so Vue can track component identity
 
 **Incorrect:**
 ```html
 <!-- WRONG: No key provided -->
 <li v-for="item in items">{{ item.name }}</li>
 
-<!-- WRONG: Using array index as key - shifts when list changes -->
+<!-- RISKY: If the list changes order or length, the index no longer identifies the same item -->
 <li v-for="(item, index) in items" :key="index">
   <input v-model="item.value" />
 </li>
@@ -76,9 +76,9 @@ The `key` attribute tells Vue how your data relates to the DOM elements it rende
 </div>
 ```
 
-## When Keys Are Critical
+## When Stable Keys Matter Most
 
-Keys are absolutely required when v-for loops contain:
+Use stable keys especially when v-for loops contain:
 - Components with local state
 - Form elements (`<input>`, `<select>`, `<textarea>`)
 - Elements with initialization logic (mounted/created hooks)
@@ -86,5 +86,5 @@ Keys are absolutely required when v-for loops contain:
 - Direct DOM manipulation
 
 ## Reference
-- [Vue.js List Rendering - Key](https://vuejs.org/guide/essentials/list.html#maintaining-state-with-key)
+- [Vue.js List Rendering - Maintaining State with `key`](https://vuejs.org/guide/essentials/list.html#maintaining-state-with-key) — in-place patching, when a key is recommended, and the primitive key constraint.
 - [Vue 3 Migration Guide - Key on Template](https://v3-migration.vuejs.org/breaking-changes/key-attribute)

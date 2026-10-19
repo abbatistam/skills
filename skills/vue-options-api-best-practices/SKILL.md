@@ -21,3 +21,9 @@ Vue.js Options API best practices, TypeScript integration, and common gotchas.
 - Methods aren't binding to component instance context → See [no-arrow-functions-in-methods](reference/no-arrow-functions-in-methods.md)
 - Lifecycle hooks losing access to component data → See [no-arrow-functions-in-lifecycle-hooks](reference/no-arrow-functions-in-lifecycle-hooks.md)
 - Debounced functions sharing state across component instances → See [stateful-methods-lifecycle](reference/stateful-methods-lifecycle.md)
+
+## Primary references
+
+- [Vue: Options API](https://vuejs.org/api/options-state.html) — component state and Options API behavior.
+- [Vue: Lifecycle Hooks](https://vuejs.org/guide/essentials/lifecycle.html) — lifecycle timing and the `this` context of Options API hooks.
+- [Vue: TypeScript with Options API](https://vuejs.org/guide/typescript/options-api.html) — `defineComponent`, option typing, props, and event handlers.

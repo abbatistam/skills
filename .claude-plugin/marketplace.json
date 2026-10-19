@@ -2,7 +2,7 @@
   "name": "vue-skills",
   "description": "A collection of skills for Vue.js development.",
   "owner": {
-    "name": "vuejs-ai"
+    "name": "abbatistam"
   },
   "plugins": [
     {
@@ -13,12 +13,12 @@
     {
       "name": "create-adaptable-composable",
       "source": "./skills/create-adaptable-composable",
-      "description": "Create a library-grade Vue composable that accepts maybe-reactive inputs (MaybeRef / MaybeRefOrGetter) so callers can pass a plain value, ref, or getter. Normalize inputs with toValue()/toRef() inside reactive effects (watch/watchEffect) to keep behavior predictable and reactive. Use this skill when user asks for creating adaptable or reusable composables."
+      "description": "Create a Vue 3.3+ composable that accepts plain values, refs, or getters when appropriate. Normalize inputs with toValue() inside reactive effects, and require a writable Ref or explicit setter when changes must flow back to the caller. Use this skill when user asks for an adaptable or reusable composable."
     },
     {
       "name": "vue-best-practices",
       "source": "./skills/vue-best-practices",
-      "description": "A collection of best practices and tips for developing applications using Vue.js. MUST be used when developing, refactoring, or reviewing Vue.js and Nuxt tasks."
+      "description": "Vue 3 development guidance. Prefer Composition API with <script setup> for new full-application SFC work when it fits the project; preserve existing Options API and JavaScript conventions. Use for Vue-specific implementation or review tasks."
     },
     {
       "name": "vue-debug-guides",

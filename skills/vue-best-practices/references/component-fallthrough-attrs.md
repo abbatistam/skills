@@ -15,7 +15,7 @@ tags: [vue3, attrs, fallthrough-attributes, composition-api, reactivity]
 - Access hyphenated attribute names with bracket notation (for example `attrs['data-testid']`)
 - Access event listeners with camelCase `onX` keys (for example `attrs.onClick`)
 - Do not `watch()` values returned from `useAttrs()`; those watchers do not trigger on attr changes
-- Use `onUpdated()` for attr-driven side effects
+- Use `onUpdated()` only when a side effect must read the latest attrs after an update
 - Promote frequently observed attrs to props when reactive observation is required
 
 ## Access Attribute and Listener Keys Correctly
@@ -122,18 +122,20 @@ watch(
 
 ## Common Patterns
 
-### Check for optional attrs safely
+### Read optional attrs when setup runs
 
 ```vue
 <script setup>
-import { computed, useAttrs } from 'vue'
+import { useAttrs } from 'vue'
 
 const attrs = useAttrs()
 
-const hasTestId = computed(() => 'data-testid' in attrs)
-const ariaLabel = computed(() => attrs['aria-label'] ?? 'Default label')
+const hasTestId = 'data-testid' in attrs
+const ariaLabel = attrs['aria-label'] ?? 'Default label'
 </script>
 ```
+
+These values are snapshots from setup. `useAttrs()` returns the latest attrs when read, but is not reactive; a `computed()` based on `attrs` will not re-run when an attribute changes. Declare an attribute as a prop if the component needs reactive observation.
 
 ### Forward listeners after internal logic
 
@@ -172,3 +174,8 @@ const testId = attrs['data-testid'] as string | undefined
 const onClick = attrs.onClick as ((event: MouseEvent) => void) | undefined
 </script>
 ```
+
+## Sources
+
+- [Vue: Fallthrough Attributes](https://vuejs.org/guide/components/attrs.html) — preserved attribute casing, listener keys, `inheritAttrs`, `useAttrs()`, and its non-reactive behavior.
+- [Vue: Lifecycle Hooks](https://vuejs.org/guide/essentials/lifecycle.html#registering-lifecycle-hooks) — `onUpdated()` timing and the warning against mutating state from the hook.

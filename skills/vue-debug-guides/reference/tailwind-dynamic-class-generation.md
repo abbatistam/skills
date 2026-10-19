@@ -2,14 +2,13 @@
 
 ## Rule
 
-Never construct Tailwind CSS class names dynamically using string concatenation or template literals. Tailwind's build process cannot detect dynamically generated class names, causing styles to be missing in production.
+Do not construct Tailwind CSS class names from partial strings. Tailwind scans source text for complete candidates; an interpolated class that is absent as a complete string will not have a generated utility rule.
 
 ## Why This Matters
 
 - Tailwind uses static analysis at build time to determine which CSS classes to include
 - Dynamically constructed class names (e.g., `bg-${color}-500`) are invisible to Tailwind's scanner
-- Classes work in development with JIT but fail silently in production builds
-- This is a common source of "it works locally but not in production" bugs
+- Missing candidates are not generated into the stylesheet, so the class has no Tailwind utility rule at runtime
 
 ## Bad Code
 
@@ -91,9 +90,18 @@ const props = defineProps({
 </template>
 ```
 
-## Safelist for Truly Dynamic Classes
+## Explicitly Include Classes Not Present in Scanned Sources
 
-If you must use dynamic classes, add them to Tailwind's safelist:
+Avoid this when a static mapping is possible. If a finite set of classes must be generated even though no scanned source contains them, use the mechanism matching the project's Tailwind version.
+
+Tailwind CSS v4:
+
+```css
+@import "tailwindcss";
+@source inline("bg-red-500 bg-blue-500 bg-green-500");
+```
+
+Tailwind CSS v3:
 
 ```javascript
 // tailwind.config.js
@@ -109,6 +117,8 @@ module.exports = {
   ]
 }
 ```
+
+The v3 `safelist` option is not the v4 API; v4 uses `@source inline()`.
 
 ## Alternative: CSS Custom Properties
 
@@ -140,5 +150,5 @@ const props = defineProps({
 
 ## References
 
-- [Tailwind CSS Dynamic Class Names](https://tailwindcss.com/docs/content-configuration#dynamic-class-names)
-- [Tailwind Safelist](https://tailwindcss.com/docs/content-configuration#safelisting-classes)
+- [Tailwind CSS v4: Detecting Classes in Source Files](https://tailwindcss.com/docs/detecting-classes-in-source-files) — static detection, complete class names, `@source`, and `@source inline()`.
+- [Tailwind CSS v3: Content Configuration](https://v3.tailwindcss.com/docs/content-configuration#safelisting-classes) — v3 source scanning and `safelist` configuration.

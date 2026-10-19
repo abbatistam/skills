@@ -1,149 +1,56 @@
-# vue-skills
+# Vue Skills
 
-Agent skills for Vue 3 development.
-
-> 🚧 **Early Experiment / Community Project**
->
-> This repository is an early experiment in creating specialized skills for AI agents to enhance Vue 3 development. Skills are derived from real-world issues but may be incomplete due to hallucinations—please give feedback. If valuable, I plan to propose transferring this project to the Vue organization to benefit the wider community.
+Bryan's personal fork of [`vuejs-ai/skills`](https://github.com/vuejs-ai/skills), maintained for personal use. This repository is not an official Vue project. Upstream license and attribution are retained.
 
 ## Installation
 
+Install from the personal fork with the Skills CLI:
+
 ```bash
-npx skills add vuejs-ai/skills
+npx skills add abbatistam/skills
 ```
 
-### Claude Code Marketplace
+Claude Code users can install the marketplace bundle or individual skills:
 
-An alternative for Claude Code users:
-
-```bash
-# Add marketplace
-/plugin marketplace add vuejs-ai/skills
-
-# Install all skills at once
+```text
+/plugin marketplace add abbatistam/skills
 /plugin install vue-skills-bundle@vue-skills
-
-# Install individual skills
 /plugin install vue-best-practices@vue-skills
-
-# Install multiple skills
-/plugin install vue-best-practices@vue-skills vue-router-best-practices@vue-skills
 ```
 
-## Usage
+## Using the skills
 
-For most reliable results, prefix your prompt with `use vue skill`:
+The collection contains eight skills covering Vue 3 best practices, debugging, Options API, JSX, Vue Router, Pinia, testing, and reusable composables. Asking an agent to use the relevant skill can help route a task; activation still depends on the agent host and its skill-loading behavior.
 
-```
-Use vue skill, <your prompt here>
-```
-
-This explicitly triggers the skill and ensures the AI follows the documented patterns. Without the prefix, skill triggering may be inconsistent depending on how closely your prompt matches the skill's description keywords.
-
-## Available Skills
-
-| Skill | When to use | Description |
-|-------|-------------|-------------|
-| **vue-best-practices** | Vue 3 + Composition API + TypeScript | Best practices, common gotchas, SSR guidance, performance |
-| **vue-options-api-best-practices** | Options API (`data()`, `methods`) | `this` context, lifecycle, TypeScript with Options API |
-| **vue-router-best-practices** | Vue Router 4 | Navigation guards, route params, route-component lifecycle |
-| **vue-pinia-best-practices** | Pinia for state management | Store setup, reactivity, state patterns |
-| **vue-testing-best-practices** | Writing component or E2E tests | Vitest, Vue Test Utils, Playwright |
-| **vue-jsx-best-practices** | JSX in Vue | Syntax differences from React JSX |
-| **vue-debug-guides** | Debugging Vue 3 issues | Runtime errors, warnings, async error handling, hydration issues |
-| **create-adaptable-composable** | Creating reusable composables | `MaybeRef`/`MaybeRefOrGetter` input patterns |
+For detailed coverage, open the relevant `SKILL.md`; each skill links to focused references for specific APIs and symptoms.
 
 ## Examples
 
-### vue-best-practices
+The demonstrations below belong to the upstream repository and are linked as examples of the original skills; they are not included in this fork.
 
-#### Demo - Todo App
+- [Todo application example](https://github.com/vuejs-ai/skills/tree/dev/demo/todo-app)
+- [Reusable composable example](https://github.com/vuejs-ai/skills/tree/dev/demo/hidden-composable)
 
-Prompt
+## Evidence and validation
 
-```
-create a todo app
-```
+The ongoing audit uses primary documentation from Vue, its official ecosystem projects, and relevant platform or tool maintainers. Focused corrections label version-specific behavior where the source establishes it; the audit report describes the coverage and limits of the current review.
 
-🔎 See demo [full output](https://github.com/vuejs-ai/skills/tree/dev/demo/todo-app).
+Run the dependency-free structural validator with:
 
-#### Changes after using skill
-
-- More readable [code](https://github.com/vuejs-ai/skills/tree/dev/demo/todo-app/with-skills/App.vue)
-- [Components](https://github.com/vuejs-ai/skills/tree/dev/demo/todo-app/with-skills/components) split
-- Moved states into composables ([useTodos.ts](https://github.com/vuejs-ai/skills/tree/dev/demo/todo-app/with-skills/composables/useTodos.ts))
-- Use `ref()` for primitive reactive data; reserve `shallowRef()` for values that should not be deeply reactive (see [Reactivity](skills/vue-best-practices/references/reactivity.md))
-
-### create-adaptable-composable
-
-Original from `create-agnostic-composable` of [`serkodev/vue-skills`](https://github.com/serkodev/vue-skills/tree/main)
-
-#### Demo - useHidden
-
-Prompt
-
-```
-create a reusable composable for controlling hidden for a element
+```bash
+node scripts/validate-skills.mjs --write-report
 ```
 
-🔎 See demo [full output](https://github.com/vuejs-ai/skills/tree/dev/demo/hidden-composable).
+It checks skill frontmatter, code fences, local Markdown links and anchors, and primary-source link coverage. It does not establish that every example compiles or that a model performs better with a skill. See [`docs/quality-audit.md`](docs/quality-audit.md) for the current audit scope and evaluation status.
 
-#### Changes after using skill
+An opt-in A/B harness compares a model's answers with and without the relevant skill context. Validate the cases without making API calls:
 
-- Used `MaybeRef` and `MaybeRefOrGetter` for input parameters for reactivity flexibility.
-
-```ts
-export interface UseHiddenOptions {
-  hidden?: MaybeRef<boolean>
-  initialHidden?: MaybeRefOrGetter<boolean>
-  syncAria?: boolean
-}
-
-export function useHidden(
-  target?: MaybeRefOrGetter<HTMLElement | null | undefined>,
-  options: UseHiddenOptions = {},
-)
+```bash
+node scripts/run-skill-evals.mjs --dry-run --model MODEL --judge-model JUDGE_MODEL
 ```
 
-## Methodology
-
-### Skill Types
-
-Skills are classified into two categories:
-
-- **Capability**: AI *cannot* solve the problem without the skill. These address version-specific issues, undocumented behaviors, recent features, or edge cases outside AI's training data.
-
-- **Efficiency**: AI *can* solve the problem but not well. These provide optimal patterns, best practices, and consistent approaches that improve solution quality.
-
-### Validation Process
-
-Each skill rule is validated through automated evals:
-
-1. **Baseline**: Run without skill installed
-2. **With-skill**: Run with skill installed
-
-A rule is kept only if it enables the model to solve problems it couldn't solve without it.
-
-| Baseline | With Skill | Action |
-|----------|------------|--------|
-| Fail | Pass | Keep |
-| Pass | Pass | Considered removed |
-
-## Contributing
-
-Development happens on the `dev` branch. The `main` branch is reserved for published skills only.
-
-1. Create a feature branch from `dev`
-2. Submit a PR to `dev`
-3. After approval, changes are merged to `dev`
-4. Maintainers sync `dev` → `main` via GitHub Action when ready to publish
-
-## Related projects
-
-- [antfu/skills](https://github.com/antfu/skills) - Anthony Fu's curated collection of agent skills for Vue/Vite/Nuxt
-- [vueuse/vueuse-skills](https://github.com/vueuse/vueuse-skills) - Agent skills for VueUse development
-- [onmax/nuxt-skills](https://github.com/onmax/nuxt-skills) - Agent skills for Nuxt development
+A real run requires `OPENAI_API_KEY`, makes three Responses API calls per case per replicate, and writes raw answers and blind judge scores under `evals/results/`. Model IDs are explicit because access and availability depend on the account. No comparative run is recorded yet; the harness measures injected skill context, not host-native skill discovery. See the [Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create) and its [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses).
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).

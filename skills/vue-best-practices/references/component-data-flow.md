@@ -27,7 +27,7 @@ The main principle of data flow in Vue.js is **Props Down / Events Up**. This is
 
 ## Props: One-Way Data Down
 
-Props are inputs. Do not mutate them in the child.
+Props are inputs and flow one way from parent to child. Avoid assigning to a prop in the child; for object and array props, nested mutation is technically possible because the value is shared by reference, but it obscures ownership and should generally be replaced with an emitted update or an explicit shared-state contract.
 
 **BAD:**
 ```vue
@@ -210,7 +210,7 @@ const emit = defineEmits(['updateUser'])
 
 ## `v-model`: Predictable Two-Way Bindings
 
-Use `defineModel` by default for component bindings and emit updates on input. Only use the `modelValue` + `update:modelValue` pattern if you are on Vue < 3.4.
+For a component that exposes a `v-model` binding, use `defineModel` in Vue 3.4+. For Vue versions before 3.4, implement the `modelValue` prop and `update:modelValue` event explicitly.
 
 **BAD:**
 ```vue
@@ -371,3 +371,12 @@ function saveDraft() {
   <button type="button" @click="saveDraft">Save draft</button>
 </template>
 ```
+
+## Sources
+
+- [Vue: Props](https://vuejs.org/guide/components/props.html) — one-way prop flow, mutation guidance, and reactive props destructure in Vue 3.5+.
+- [Vue: Events](https://vuejs.org/guide/components/events.html) — component event declarations and the fact that component events do not bubble.
+- [Vue: Component `v-model`](https://vuejs.org/guide/components/v-model.html) — the `defineModel` macro and the `modelValue` / `update:modelValue` convention.
+- [Vue: Provide / Inject](https://vuejs.org/guide/components/provide-inject.html) — scoped dependency sharing and mutation ownership.
+- [Vue: Template Refs](https://vuejs.org/guide/essentials/template-refs.html) — `useTemplateRef` and template-ref typing.
+- [Vue: TypeScript with Composition API](https://vuejs.org/guide/typescript/composition-api.html) — type-based props, emits, and `InjectionKey` patterns.

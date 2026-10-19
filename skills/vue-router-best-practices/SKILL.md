@@ -13,7 +13,7 @@ Vue Router best practices, common gotchas, and navigation patterns.
 - Accessing component instance in beforeRouteEnter guard → See [router-beforerouteenter-no-this](reference/router-beforerouteenter-no-this.md)
 - Navigation guard making API calls without awaiting → See [router-guard-async-await-pattern](reference/router-guard-async-await-pattern.md)
 - Users trapped in infinite redirect loops → See [router-navigation-guard-infinite-loop](reference/router-navigation-guard-infinite-loop.md)
-- Navigation guard using deprecated next() function → See [router-navigation-guard-next-deprecated](reference/router-navigation-guard-next-deprecated.md)
+- Prefer return-based guard outcomes while preserving the beforeRouteEnter instance callback → See [router-navigation-guard-next-deprecated](reference/router-navigation-guard-next-deprecated.md)
 
 ### Route Lifecycle
 - Stale data when navigating between same route → See [router-param-change-no-lifecycle](reference/router-param-change-no-lifecycle.md)
@@ -21,3 +21,9 @@ Vue Router best practices, common gotchas, and navigation patterns.
 
 ### Setup
 - Building production single-page application → See [router-use-vue-router-for-production](reference/router-use-vue-router-for-production.md)
+
+## Primary references
+
+- [Vue Router: Guide](https://router.vuejs.org/guide/) — router setup and route behavior.
+- [Vue Router: Navigation Guards](https://router.vuejs.org/guide/advanced/navigation-guards.html) — guard order, asynchronous guards, redirects, and cancellation.
+- [Vue Router: Dynamic Route Matching](https://router.vuejs.org/guide/essentials/dynamic-matching.html) — reused route components and reacting to parameter changes.

@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "suspense-is-not-an-error-boundary",
+      "skill": "vue-debug-guides",
+      "references": [
+        "reference/async-component-suspense-control.md",
+        "reference/suspense-no-builtin-error-handling.md"
+      ],
+      "prompt": "In a Vue 3.4 app, an async child inside <Suspense> rejects after a network failure. The pending fallback works, but no error UI appears. Explain what Suspense handles and show the smallest correct error-handling pattern. Mention any relevant version caveat.",
+      "rubric": [
+        "Distinguishes pending async dependencies from rejected errors; Suspense is not itself an error boundary and remains experimental.",
+        "Provides an actionable error path such as an ancestor onErrorCaptured hook or defineAsyncComponent onError, with a minimal valid Vue pattern.",
+        "Does not invent a Suspense error slot or claim that its fallback handles rejected errors."
+      ]
+    },
+    {
+      "id": "router-before-enter-on-param-change",
+      "skill": "vue-router-best-practices",
+      "references": [
+        "reference/router-beforeenter-no-param-trigger.md",
+        "reference/router-param-change-no-lifecycle.md"
+      ],
+      "prompt": "With Vue Router 4, I navigate from /users/1 to /users/2 and expect the same route's beforeEnter guard to run again. It does not. Explain why and give two valid ways to react to the new id without forcing a full remount.",
+      "rubric": [
+        "Explains that beforeEnter runs on entering a route record and does not run for params-only changes on the same record.",
+        "Offers valid reactive handling, such as watching route.params.id or using beforeRouteUpdate/onBeforeRouteUpdate.",
+        "Does not recommend forcing a key/remount as the only solution or misstate component reuse."
+      ]
+    },
+    {
+      "id": "writable-composable-input-contract",
+      "skill": "create-adaptable-composable",
+      "references": [],
+      "prompt": "For Vue 3.3+, design useCounter(input) so a caller can pass either the number 0 or a ref and expects add() to update the caller's count in both cases. Is MaybeRef<number> sufficient? Show the correct API contract and a minimal implementation.",
+      "rubric": [
+        "Recognizes that a plain primitive cannot receive write-back through a composable parameter.",
+        "Requires a writable Ref or an explicit getter/setter contract for two-way updates; does not claim MaybeRef makes a primitive writable.",
+        "Shows a minimal, type-consistent implementation and caller example."
+      ]
+    },
+    {
+      "id": "virtualize-large-lists-without-threshold-myths",
+      "skill": "vue-best-practices",
+      "references": [
+        "references/perf-virtualize-large-lists.md"
+      ],
+      "prompt": "A Vue page renders 12,000 rows and scrolling is slow. Explain how to decide whether to virtualize, what virtualization changes, and give a Vue-compatible implementation direction. Avoid relying on an arbitrary row-count threshold.",
+      "rubric": [
+        "Recommends measuring the rendered page and describes virtualization as rendering a viewport-sized subset rather than mounting every row.",
+        "Clarifies that virtualization reduces DOM/component work but does not automatically remove the full data set from memory.",
+        "Gives a credible Vue 3-compatible library or implementation path and avoids a universal numeric threshold."
+      ]
+    },
+    {
+      "id": "nested-prop-object-mutation",
+      "skill": "vue-best-practices",
+      "references": [
+        "references/component-data-flow.md"
+      ],
+      "prompt": "A child receives a user object prop and edits user.name directly. Vue does not warn, but the parent changes too. Explain the behavior accurately and propose a clear ownership pattern for an editable form.",
+      "rubric": [
+        "Distinguishes readonly prop binding from nested object mutation through a shared reference.",
+        "Explains why direct nested mutation obscures ownership and recommends emitting an update or using an explicit v-model contract, or editing a local draft and committing it.",
+        "Does not claim Vue deeply freezes props or that nested mutation is technically impossible."
+      ]
+    },
+    {
+      "id": "router-next-callback-still-supported",
+      "skill": "vue-router-best-practices",
+      "references": [
+        "reference/router-navigation-guard-next-deprecated.md"
+      ],
+      "prompt": "In Vue Router 4, should we mechanically remove every third-argument next() call from navigation guards? One beforeRouteEnter guard uses next(vm => ...) to call a method on the entering component. Explain the safe migration rule and show when a return-based guard is preferable.",
+      "rubric": [
+        "Recommends return-based results for ordinary allow, cancel, and redirect decisions while accurately saying the third next argument is still supported in the current Vue Router guide and deprecated in the API reference.",
+        "Preserves next(vm => ...) as the supported way for beforeRouteEnter to access the entering instance after navigation confirmation.",
+        "Does not claim next is removed or must be mechanically eliminated, and notes that callback-based control flow must resolve exactly once per path."
+      ]
+    },
+    {
+      "id": "pinia-selective-destructuring-reactivity",
+      "skill": "vue-pinia-best-practices",
+      "references": [
+        "reference/pinia-store-destructuring-breaks-reactivity.md"
+      ],
+      "prompt": "In a Pinia setup, `const { count, doubleCount, increment } = useCounterStore()` leaves the template stale after `count` changes. Explain which destructured values lose tracking, how to fix them, and whether actions should also go through storeToRefs().",
+      "rubric": [
+        "Explains that destructuring state/getter values from the reactive store disconnects those bindings from the store updates.",
+        "Uses storeToRefs() for state and getters, while allowing actions to be destructured directly or accessed on the store.",
+        "Does not claim storeToRefs wraps actions or that all destructuring is always invalid."
+      ]
+    },
+    {
+      "id": "options-api-arrow-method-this",
+      "skill": "vue-options-api-best-practices",
+      "references": [
+        "reference/no-arrow-functions-in-methods.md"
+      ],
+      "prompt": "An Options API method is written as `save: () => this.status = 'saved'` and `this` is wrong. Explain why, give the minimal fix, and clarify whether arrow functions are forbidden inside the method body or in every Options API option.",
+      "rubric": [
+        "Explains that an arrow function captures lexical this, so Vue cannot bind the component instance as the method's this.",
+        "Shows a regular method/function for the Options API method and permits arrow callbacks inside it when lexical this is useful.",
+        "Avoids the overbroad claim that arrow functions are forbidden everywhere in Options API."
+      ]
+    },
+    {
+      "id": "vue-jsx-attributes-and-input-events",
+      "skill": "vue-jsx-best-practices",
+      "references": [
+        "reference/render-function-jsx-vue-vs-react.md"
+      ],
+      "prompt": "I'm porting a React form field to Vue 3 JSX. Which attributes should I use for CSS class and a label's control association, and should I use onChange or onInput for a value that must update on every keystroke? Mention the Vue JSX TypeScript configuration caveat if relevant.",
+      "rubric": [
+        "Uses Vue JSX's class and for attribute names rather than recommending React-only naming as the default.",
+        "Distinguishes Vue's change event from input-per-keystroke behavior and recommends onInput for immediate text updates when that is the requirement.",
+        "If discussing TSX configuration, gives jsx: preserve and jsxImportSource: vue and scopes the Vue 3.4+ JSX namespace change accurately."
+      ]
+    },
+    {
+      "id": "vue-test-utils-async-boundaries",
+      "skill": "vue-testing-best-practices",
+      "references": [
+        "reference/testing-async-await-flushpromises.md"
+      ],
+      "prompt": "A Vue Test Utils test clicks a button that starts an API request and then waits 500 ms using `flushPromises()`; it still flakes with fake timers and a request promise that the test resolves manually. Explain the correct async boundaries and what each wait actually guarantees.",
+      "rubric": [
+        "Awaits trigger/setValue (or nextTick after programmatic reactive changes) for Vue's DOM update.",
+        "Uses flushPromises only to drain handlers after the mock/deferred request has resolved, and does not claim it settles unresolved promises.",
+        "Advances fake timers with the test runner's timer controls rather than flushPromises, then awaits any resulting Vue update."
+      ]
+    },
+    {
+      "id": "v-for-key-identity-and-static-lists",
+      "skill": "vue-debug-guides",
+      "references": [
+        "reference/v-for-key-attribute.md"
+      ],
+      "prompt": "A Vue 3 list renders static, stateless labels, then a different list renders editable rows that users can reorder. Explain when a key is useful, whether every v-for universally requires one, and why using the index as the editable rows' key can be wrong.",
+      "rubric": [
+        "Explains Vue's default in-place patching and that an unkeyed list may be appropriate for simple stateless output or intentional performance use.",
+        "Recommends a unique stable primitive key when component state, temporary DOM state, transitions, or item identity must follow the data item.",
+        "Explains that index keys can attach reused DOM/component state to a different item after reorder or insertion, without declaring index keys universally forbidden."
+      ]
+    }
+  ]
+}
