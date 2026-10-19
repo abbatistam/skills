@@ -15,7 +15,7 @@ This reference covers the core reactivity decisions for local state, external da
 ## Task List
 
 - Declare reactive state correctly
-  - Always use `shallowRef()` instead of `ref()` for primitive values
+  - Use `ref()` for primitive values; reserve `shallowRef()` for values that should not be deeply reactive
   - Choose the correct reactive declaration method for objects/arrays/map/set
 - Follow best practices for `reactive`
   - Avoid destructuring from `reactive()` directly
@@ -31,18 +31,14 @@ This reference covers the core reactivity decisions for local state, external da
 
 ## Declare reactive state correctly
 
-### Always use `shallowRef()` instead of `ref()` for primitive values (string, number, boolean, null, etc.) for better performance.
+### Use `ref()` for primitive values; reserve `shallowRef()` for values that should not be deeply reactive
 
-**Incorrect:**
+`ref()` tracks assignments to `.value` for primitive values and only converts object values to reactive proxies. Since primitives have no nested state to convert, `shallowRef()` usually gives no behavioral benefit for them. Reserve `shallowRef()` for object-like values that should remain unproxied, such as external state or large immutable structures.
+
+**Recommended:**
 ```ts
 import { ref } from 'vue'
 const count = ref(0)
-```
-
-**Correct:**
-```ts
-import { shallowRef } from 'vue'
-const count = shallowRef(0)
 ```
 
 ### Choose the correct reactive declaration method for objects/arrays/map/set
