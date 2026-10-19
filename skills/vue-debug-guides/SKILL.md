@@ -23,7 +23,7 @@ For development best practices and common gotchas, use `vue-best-practices`.
 ### Computed
 - Computed getter triggers mutations or requests unexpectedly → See [computed-no-side-effects](reference/computed-no-side-effects.md)
 - Mutating computed values causes changes to disappear → See [computed-return-value-readonly](reference/computed-return-value-readonly.md)
-- Computed value never updates after conditional logic → See [computed-conditional-dependencies](reference/computed-conditional-dependencies.md)
+- Understanding which dependencies a computed getter tracks on each branch → See [computed-conditional-dependencies](reference/computed-conditional-dependencies.md)
 - Sorting or reversing arrays breaks original state → See [computed-array-mutation](reference/computed-array-mutation.md)
 - Passing parameters to computed properties fails → See [computed-no-parameters](reference/computed-no-parameters.md)
 
@@ -75,7 +75,7 @@ For development best practices and common gotchas, use `vue-best-practices`.
 - Textarea content changes not updating the ref → See [textarea-no-interpolation](reference/textarea-no-interpolation.md)
 - iOS users cannot select dropdown first option → See [select-initial-value-ios-bug](reference/select-initial-value-ios-bug.md)
 - Parent and child components have different values → See [define-model-default-value-sync](reference/define-model-default-value-sync.md)
-- Object property changes not syncing to parent → See [definemodel-object-mutation-no-emit](reference/definemodel-object-mutation-no-emit.md)
+- Nested defineModel mutations change a shared object without emitting an update event → See [definemodel-object-mutation-no-emit](reference/definemodel-object-mutation-no-emit.md)
 - Real-time search/validation broken for Chinese/Japanese input → See [v-model-ime-composition](reference/v-model-ime-composition.md)
 - Number input returns empty string instead of zero → See [v-model-number-modifier-behavior](reference/v-model-number-modifier-behavior.md)
 - Custom checkbox values not submitted in forms → See [checkbox-true-false-value-form-submission](reference/checkbox-true-false-value-form-submission.md)
@@ -141,7 +141,7 @@ For development best practices and common gotchas, use `vue-best-practices`.
 ### Async Components
 - Route components misconfigured with defineAsyncComponent lazy loading → See [async-component-vue-router](reference/async-component-vue-router.md)
 - Network failures or timeouts loading components → See [async-component-error-handling](reference/async-component-error-handling.md)
-- Template refs undefined after component reactivation → See [async-component-keepalive-ref-issue](reference/async-component-keepalive-ref-issue.md)
+- Accessing async component refs with KeepAlive → See [async-component-keepalive-ref-access](reference/async-component-keepalive-ref-access.md)
 
 ### Render Functions
 - Render function output stays static after state changes → See [rendering-render-function-return-from-setup](reference/rendering-render-function-return-from-setup.md)
@@ -173,7 +173,7 @@ For development best practices and common gotchas, use `vue-best-practices`.
 
 ### Suspense
 - Need to handle async errors from Suspense components → See [suspense-no-builtin-error-handling](reference/suspense-no-builtin-error-handling.md)
-- Using Suspense with server-side rendering → See [suspense-ssr-hydration-issues](reference/suspense-ssr-hydration-issues.md)
+- Handling async errors and hydration caveats with Suspense → See [suspense-ssr-hydration-issues](reference/suspense-ssr-hydration-issues.md)
 - Async component loading/error UI ignored under Suspense → See [async-component-suspense-control](reference/async-component-suspense-control.md)
 
 ### SSR
@@ -186,7 +186,7 @@ For development best practices and common gotchas, use `vue-best-practices`.
 - Computed objects retrigger effects despite equivalent values → See [perf-computed-object-stability](reference/perf-computed-object-stability.md)
 
 ### SFC (Single File Components)
-- Trying to use named exports from component script blocks → See [sfc-named-exports-forbidden](reference/sfc-named-exports-forbidden.md)
+- SFC missing a default component export or using exports inside `<script setup>` → See [sfc-default-component-export](reference/sfc-default-component-export.md)
 - Variables not updating in template after changes → See [sfc-script-setup-reactivity](reference/sfc-script-setup-reactivity.md)
 - Scoped styles not applying to child component elements → See [sfc-scoped-css-child-component-styling](reference/sfc-scoped-css-child-component-styling.md)
 - Scoped styles not applying to dynamic v-html content → See [sfc-scoped-css-dynamic-content](reference/sfc-scoped-css-dynamic-content.md)

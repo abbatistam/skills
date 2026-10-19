@@ -227,4 +227,3 @@ defineOptions({
 ## References
 
 - [Fallthrough Attributes - Disabling Attribute Inheritance](https://vuejs.org/guide/components/attrs.html#disabling-attribute-inheritance)
-- [Build Advanced Components in Vue 3 using $attrs](https://www.thisdot.co/blog/build-advanced-components-in-vue-3-using-usdattrs)

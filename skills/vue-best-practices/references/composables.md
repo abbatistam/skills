@@ -30,9 +30,9 @@ When an extraction needs most of the caller's refs or mutual callbacks, revise o
 **Appropriate local state for a single disclosure:**
 ```vue
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { ref } from 'vue'
 
-const expanded = shallowRef(false)
+const expanded = ref(false)
 </script>
 
 <template>
@@ -59,15 +59,15 @@ export function useProductPage() {
 **GOOD:**
 ```ts
 // useProductSearch.ts
-import { shallowRef, watch, type Ref } from 'vue'
+import { ref, shallowRef, watch, type Ref } from 'vue'
 
 export interface Product { id: string; name: string }
 type SearchProducts = (query: string, signal: AbortSignal) => Promise<Product[]>
 
 export function useProductSearch(query: Readonly<Ref<string>>, search: SearchProducts) {
   const products = shallowRef<readonly Product[]>([])
-  const pending = shallowRef(false)
-  const error = shallowRef<string | null>(null)
+  const pending = ref(false)
+  const error = ref<string | null>(null)
 
   watch(query, async (value, _previous, onCleanup) => {
     const controller = new AbortController()
@@ -92,11 +92,11 @@ export function useProductSearch(query: Readonly<Ref<string>>, search: SearchPro
 ```vue
 <!-- ProductSearch.vue -->
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { ref } from 'vue'
 import { searchProducts } from './product-api'
 import { useProductSearch } from './useProductSearch'
 
-const query = shallowRef('')
+const query = ref('')
 const { products, pending, error } = useProductSearch(query, searchProducts)
 const emit = defineEmits<{ select: [id: string] }>()
 </script>

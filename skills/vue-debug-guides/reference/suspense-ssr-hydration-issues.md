@@ -1,159 +1,49 @@
-# Suspense SSR Hydration Issues and Workarounds
+---
+title: Suspense Error Handling and SSR Hydration
+impact: MEDIUM
+impactDescription: Separating async dependency handling from hydration mismatches avoids unsupported workarounds
+type: gotcha
+tags: [vue3, suspense, ssr, hydration, async-components]
+---
 
-## Rule
+# Suspense Error Handling and SSR Hydration
 
-`<Suspense>` has known issues with SSR hydration, particularly with async components. During initial hydration, Suspense may not properly include child components within its "cloak of suspense," leading to hydration mismatches, flickering, or runtime crashes.
+`<Suspense>` is experimental. It coordinates components with async `setup()` and async components; it is not a general fix for server/client markup differences.
 
-## Why This Matters
+## Handle async dependencies and errors intentionally
 
-In SSR applications, hydration mismatches cause:
-- Visual flickering as the client re-renders
-- Loss of state in affected components
-- Console warnings in development (silent failures in production)
-- Potential runtime crashes in edge cases
-- Poor user experience, especially on slower networks
+`<Suspense>` displays its `#fallback` while supported async dependencies are pending. It does not provide an error slot or catch errors by itself. Handle async errors with `onErrorCaptured()` on an ancestor, or set `suspensible: false` and configure the async component's own loading and error states.
 
-## Bad Code
+Vue Router's lazy route imports do not trigger `<Suspense>` themselves. Async components nested inside the route can still be dependencies of a surrounding `<Suspense>`.
 
 ```vue
 <script setup>
 import { defineAsyncComponent } from 'vue'
 
-const AsyncDashboard = defineAsyncComponent(
-  () => import('./Dashboard.vue')
-)
+const AsyncDashboard = defineAsyncComponent(() => import('./Dashboard.vue'))
 </script>
 
 <template>
-  <!-- Async component directly in Suspense can fail hydration -->
   <Suspense>
     <AsyncDashboard />
     <template #fallback>
-      Loading...
+      Loading dashboard...
     </template>
   </Suspense>
 </template>
 ```
 
-## Good Code
+## Diagnose hydration mismatches
 
-### Solution 1: Wrap Async Components with Suspense
+Hydration expects the client render to match the server-rendered HTML. Vue's SSR guide identifies invalid HTML nesting and server/client state differences as common causes. A mismatch is not evidence that async components inside `<Suspense>` are generally unsupported; inspect the rendered markup and data used on both sides first.
 
-```vue
-<template>
-  <!-- Each async component wrapped in its own Suspense -->
-  <div class="dashboard">
-    <Suspense>
-      <AsyncHeader />
-      <template #fallback><HeaderSkeleton /></template>
-    </Suspense>
+Vue documents one specific caveat: replacing an errored child component from a parent deep inside `<Suspense>` can cause an SSR hydration mismatch. Move fallible setup logic into an ancestor where it can be caught before rendering the child that may fail.
 
-    <Suspense>
-      <AsyncContent />
-      <template #fallback><ContentSkeleton /></template>
-    </Suspense>
-  </div>
-</template>
-```
+Do not use `onErrorCaptured()` as a generic hydration-mismatch detector. It handles descendant errors; for hydration mismatches, compare the server-rendered HTML with the client's initial render and follow the causes in Vue's SSR guide.
 
-### Solution 2: Use ClientOnly Wrapper (Nuxt/SSR Frameworks)
+## Reference
 
-```vue
-<template>
-  <!-- Prevent SSR for problematic async components -->
-  <ClientOnly>
-    <Suspense>
-      <AsyncDashboard />
-      <template #fallback>
-        Loading dashboard...
-      </template>
-    </Suspense>
-
-    <template #fallback>
-      <DashboardSkeleton />
-    </template>
-  </ClientOnly>
-</template>
-```
-
-### Solution 3: Prefetch with Proper Stale Time (with TanStack Query)
-
-```vue
-<script setup>
-import { useQuery, useQueryClient } from '@tanstack/vue-query'
-
-// IMPORTANT: All useQuery calls must be BEFORE any await
-const { data, suspense } = useQuery({
-  queryKey: ['dashboard'],
-  queryFn: fetchDashboardData,
-  staleTime: 1000 * 60 * 5, // 5 minutes - prevents refetch after hydration
-})
-
-// Wait for suspense AFTER all useQuery calls
-await suspense()
-
-// Now safe to use data
-</script>
-```
-
-### Solution 4: Handle Hydration Errors Gracefully
-
-```vue
-<script setup>
-import { ref, onErrorCaptured, onMounted } from 'vue'
-
-const hydrationError = ref(false)
-const isClient = ref(false)
-
-onMounted(() => {
-  isClient.value = true
-})
-
-onErrorCaptured((err) => {
-  if (err.message?.includes('hydration')) {
-    hydrationError.value = true
-    return false
-  }
-})
-</script>
-
-<template>
-  <div v-if="hydrationError" class="hydration-recovery">
-    <!-- Force client-only re-render -->
-    <Suspense v-if="isClient">
-      <AsyncContent />
-      <template #fallback>Recovering...</template>
-    </Suspense>
-  </div>
-
-  <Suspense v-else>
-    <AsyncContent />
-    <template #fallback>Loading...</template>
-  </Suspense>
-</template>
-```
-
-## Common SSR + Suspense Issues
-
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Hydration mismatch | Async chunk not loaded in time | Wrap with Suspense or use ClientOnly |
-| Empty flash on Safari | Slow chunk loading | Preload critical chunks, use skeleton |
-| useQuery after await error | Vue context lost after await | Put all useQuery calls before any await |
-| Immediate refetch after hydration | staleTime too low | Set appropriate staleTime value |
-
-## Key Points
-
-1. Suspense + SSR has known edge cases - test thoroughly
-2. Safari has slower chunk loading that triggers more hydration issues
-3. With data-fetching libraries, ensure queries are set up before awaiting suspense
-4. Consider ClientOnly wrappers for non-critical async content
-5. Set appropriate staleTime to prevent unnecessary refetches after hydration
-6. Use skeleton screens that match server-rendered content structure
-
-## References
-
-- [Vue.js Suspense Documentation](https://vuejs.org/guide/built-ins/suspense)
-- [Vue Issue #6638 - Suspense hydration](https://github.com/vuejs/core/issues/6638)
-- [Vue Issue #7672 - defineAsyncComponent SSR](https://github.com/vuejs/core/issues/7672)
-- [TanStack Query SSR Discussion](https://github.com/TanStack/query/discussions/4870)
+- [Vue.js Suspense Guide](https://vuejs.org/guide/built-ins/suspense.html)
+- [Vue.js Async Components Guide](https://vuejs.org/guide/components/async.html)
+- [Vue.js Server-Side Rendering: Hydration Mismatch](https://vuejs.org/guide/scaling-up/ssr.html#hydration-mismatch)
+- [Vue.js Lifecycle API: Error Capturing Caveats](https://vuejs.org/api/options-lifecycle.html#errorcaptured)

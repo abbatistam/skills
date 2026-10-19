@@ -1,20 +1,20 @@
 ---
-title: Boolean Props Default to false, Not undefined
+title: Boolean Props: Runtime Defaults and Type Inference
 impact: MEDIUM
-impactDescription: TypeScript expects optional boolean to be undefined but Vue defaults it to false, causing type confusion
+impactDescription: Absent Boolean props resolve to false, and type-based defineProps reflects that resolved value
 type: gotcha
 tags: [vue3, typescript, props, boolean, defineProps]
 ---
 
-# Boolean Props Default to false, Not undefined
+# Boolean Props: Runtime Defaults and Type Inference
 
-**Impact: MEDIUM** - When using type-based `defineProps`, optional boolean props (marked with `?`) behave differently than TypeScript expects. Vue treats boolean props specially: an absent boolean prop defaults to `false`, not `undefined`. This can cause confusion when TypeScript thinks the type is `boolean | undefined`.
+**Impact: MEDIUM** - Vue casts an absent Boolean prop to `false` unless an explicit default overrides that behavior. Type-based `defineProps` accounts for this special case: for `disabled?: boolean`, `props.disabled` is typed as `boolean`, not `boolean | undefined`. If the component needs an undefined state, declare that default explicitly.
 
 ## Task Checklist
 
-- [ ] Understand that Vue's boolean casting makes absent booleans `false`
-- [ ] Use `withDefaults()` to be explicit about boolean defaults
-- [ ] Consider using non-boolean types if `undefined` is a meaningful state
+- [ ] Understand that an absent Boolean prop resolves to `false` by default
+- [ ] Know that type-based `defineProps` types an optional Boolean prop as `boolean`
+- [ ] Set an explicit `undefined` default when the component needs a three-state Boolean
 - [ ] Document this Vue-specific behavior for your team
 
 ## The Gotcha
@@ -22,16 +22,15 @@ tags: [vue3, typescript, props, boolean, defineProps]
 ```vue
 <script setup lang="ts">
 interface Props {
-  disabled?: boolean  // TypeScript sees: boolean | undefined
+  disabled?: boolean
 }
 
 const props = defineProps<Props>()
 
-// TypeScript thinks props.disabled could be undefined
-if (props.disabled === undefined) {
-  console.log('This will NEVER run!')
-  // Vue's boolean casting means disabled is false, not undefined
-}
+const isDisabled: boolean = props.disabled
+// If omitted, Vue resolves this Boolean prop to false.
+// TypeScript also rejects checking props.disabled === undefined because its
+// inferred type is boolean.
 </script>
 
 <template>
@@ -51,7 +50,7 @@ Vue has special "boolean casting" behavior inherited from HTML boolean attribute
 <MyComponent :disabled="true" />
 <MyComponent disabled="" />
 
-<!-- This makes disabled = false (NOT undefined) -->
+<!-- An absent Boolean prop resolves to false -->
 <MyComponent />
 
 <!-- Explicit false -->
@@ -84,33 +83,32 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 ```
 
-### Solution 2: Use a Three-State Type
+### Solution 2: Declare an Explicit Undefined Default
 
-If you actually need to distinguish "not set" from "explicitly false":
+If the component needs to distinguish `undefined` from `false`, set the Boolean prop's default to `undefined`:
 
 ```vue
 <script setup lang="ts">
 interface Props {
-  // Use a union type instead of optional boolean
-  state?: 'enabled' | 'disabled' | undefined
-
-  // Or use undefined explicitly
-  toggleState?: boolean | undefined
+  toggleState?: boolean
 }
 
+// Vue 3.3.5+ preserves boolean | undefined for an explicit undefined default.
 const props = withDefaults(defineProps<Props>(), {
-  state: undefined,  // Can actually be undefined
   toggleState: undefined
 })
 
-// Now you can check for undefined
-if (props.state === undefined) {
-  // Use parent's state
-} else if (props.state === 'disabled') {
-  // Explicitly disabled
+if (props.toggleState === undefined) {
+  // No preference was provided.
+} else if (props.toggleState) {
+  // Enabled.
+} else {
+  // Explicitly disabled.
 }
 </script>
 ```
+
+In Vue 3.3.5+, Vue's TypeScript support also preserves `boolean | undefined` for this explicit undefined default. Vue 3.3.4's `withDefaults` type mapping did not preserve this distinction.
 
 ### Solution 3: Use null for "Not Set"
 
@@ -118,7 +116,7 @@ if (props.state === undefined) {
 <script setup lang="ts">
 interface Props {
   // null = not set, false = explicitly off, true = explicitly on
-  selected: boolean | null
+  selected?: boolean | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -163,43 +161,41 @@ defineProps({
 
 With type-based declaration, Boolean always takes priority for absent props.
 
-## Common Bug Pattern
+## Explicit `undefined` Is Different from an Omitted Prop
 
 ```vue
 <!-- Parent.vue -->
 <script setup lang="ts">
-const userPreferences = ref({
-  darkMode: undefined as boolean | undefined
-})
+import { ref } from 'vue'
 
-// Fetch preferences...
-onMounted(async () => {
-  userPreferences.value = await fetchPreferences()
-})
+// This binding is present even while its value is undefined.
+const darkMode = ref<boolean | undefined>(undefined)
 </script>
 
 <template>
-  <!-- Bug: undefined becomes false, not "inherit system preference" -->
-  <ThemeToggle :darkMode="userPreferences.darkMode" />
+  <ThemeToggle :darkMode="darkMode" />
 </template>
 ```
 
-**Fix:**
+If the child must also preserve `undefined` when the parent omits the prop, declare `undefined` as its default:
 
 ```vue
+<!-- ThemeToggle.vue -->
 <script setup lang="ts">
-const userPreferences = ref<{
-  darkMode: boolean | null
-}>({
-  darkMode: null  // Use null for "not yet loaded"
+const props = defineProps({
+  darkMode: {
+    type: Boolean,
+    default: undefined
+  }
 })
 </script>
 
 <template>
-  <!-- Now ThemeToggle can distinguish between null and false -->
-  <ThemeToggle :darkMode="userPreferences.darkMode" />
+  <span>{{ props.darkMode === undefined ? 'Use system preference' : props.darkMode ? 'Dark' : 'Light' }}</span>
 </template>
 ```
+
+If the parent omits `darkMode` entirely and the child has no explicit undefined default, Vue resolves the absent Boolean prop to `false`.
 
 ## TypeScript Type Accuracy
 
@@ -212,14 +208,14 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// At compile time: boolean | undefined
-// At runtime: boolean (never undefined due to Vue's boolean casting)
+// At compile time: boolean
+// When omitted at runtime: false
 
-// TypeScript is technically "wrong" here, but the withDefaults usage
-// or explicit false default can help align expectations
+// In Vue 3.3.5+, withDefaults(..., { disabled: undefined }) also preserves
+// boolean | undefined in the inferred type.
 ```
 
 ## Reference
 - [Vue.js Props - Boolean Casting](https://vuejs.org/guide/components/props.html#boolean-casting)
-- [GitHub Issue: Boolean props default to false](https://github.com/vuejs/core/issues/8576)
-- [TypeScript Vue 3 Props](https://madewithlove.com/blog/typescript-vue-3-and-strongly-typed-props/)
+- [Vue core v3.3.5: defineProps Boolean prop typing and withDefaults inference](https://github.com/vuejs/core/blob/v3.3.5/packages/runtime-core/src/apiSetupHelpers.ts)
+- [Vue core PR: preserving `boolean | undefined` with an explicit undefined default](https://github.com/vuejs/core/pull/8602)

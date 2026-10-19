@@ -101,19 +101,19 @@ onMounted(() => {
 </template>
 ```
 
-## Limitation: v-for Refs
+## Refs inside `v-for`
 
-`useTemplateRef()` does **NOT** work with `v-for` refs. You must use the legacy `ref()` pattern for collecting multiple element references in a loop.
+Vue 3.5+ supports `useTemplateRef()` for refs inside `v-for`. The ref contains an array after mount, and Vue does not guarantee that the array order matches the source list.
 
 ```vue
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, useTemplateRef, onMounted } from 'vue'
 
-// CORRECT: Legacy pattern required for v-for refs
-const itemRefs = ref([])
+const items = ref(['First', 'Second', 'Third'])
+const itemRefs = useTemplateRef('items')
 
 onMounted(() => {
-  // itemRefs.value is an array of DOM elements
+  // itemRefs.value is an array of DOM elements after mount.
   itemRefs.value.forEach(el => {
     console.log(el.textContent)
   })
@@ -122,14 +122,13 @@ onMounted(() => {
 
 <template>
   <ul>
-    <li v-for="item in items" ref="itemRefs" :key="item.id">
-      {{ item.text }}
+    <li v-for="item in items" ref="items" :key="item">
+      {{ item }}
     </li>
   </ul>
 </template>
 ```
 
-**Why this limitation exists:** When using `v-for`, Vue populates the ref with an array of elements. The `useTemplateRef()` API was designed for single element references and does not support the array population mechanism that `v-for` requires.
 
 ## Migration Guide
 

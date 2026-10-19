@@ -1,147 +1,60 @@
 ---
-title: Ensure All Dependencies Are Accessed in Computed Properties
-impact: HIGH
-impactDescription: Conditional logic can prevent dependency tracking causing stale computed values
-type: capability
-tags: [vue3, computed, reactivity, dependency-tracking, gotcha]
+title: Computed Dependencies Follow the Executed Branches
+impact: MEDIUM
+impactDescription: Understanding branch-based dependency tracking prevents unnecessary subscriptions and false stale-value diagnoses
+type: gotcha
+tags: [vue3, computed, reactivity, dependency-tracking]
 ---
 
-# Ensure All Dependencies Are Accessed in Computed Properties
+# Computed Dependencies Follow the Executed Branches
 
-**Impact: HIGH** - Vue tracks computed property dependencies by monitoring which reactive properties are accessed during execution. If conditional logic prevents a property from being accessed on the first run, Vue won't track it as a dependency, causing the computed property to not update when that property changes.
+**Impact: MEDIUM** - A computed getter tracks the reactive properties it reads while it runs. Conditional branches therefore produce conditional dependencies: a property not read on the current run does not need to invalidate that result. When a tracked condition changes, Vue reruns the getter and collects the dependencies from the new branch.
 
-This is a subtle but common source of bugs, especially with short-circuit evaluation (`&&`, `||`) and early returns.
+This is normal behavior, not a stale-value bug. Do not read every possible dependency just to force a computed property to subscribe to it; doing so can cause unnecessary recomputation.
 
 ## Task Checklist
 
-- [ ] Access all reactive dependencies before any conditional logic
-- [ ] Be cautious with short-circuit operators (`&&`, `||`) that may skip property access
-- [ ] Store all dependencies in variables at the start of the computed getter
-- [ ] Test computed properties with different initial states
+- [ ] Identify which reactive reads occur on each branch
+- [ ] Confirm that a reactive condition selecting a branch is itself tracked
+- [ ] Read a value unconditionally only when the result depends on it in every branch
 
-**Incorrect:**
+## Conditional dependency tracking
+
 ```vue
 <script setup>
 import { ref, computed } from 'vue'
 
-const isEnabled = ref(false)
-const data = ref('important data')
+const showDetails = ref(false)
+const details = ref('Important data')
 
-// BAD: If isEnabled is false initially, data.value is never accessed
-// Vue won't track 'data' as a dependency!
-const result = computed(() => {
-  if (!isEnabled.value) {
-    return 'disabled'
-  }
-  return data.value  // This dependency may not be tracked
+const summary = computed(() => {
+  if (!showDetails.value) return 'Hidden'
+  return details.value
 })
 
-// BAD: Short-circuit prevents second access
-const password = ref('')
-const confirmPassword = ref('')
-
-const isValid = computed(() => {
-  // If password is empty, confirmPassword is never accessed
-  return password.value && password.value === confirmPassword.value
-})
-
-// BAD: Early return prevents dependency access
-const user = ref(null)
-const permissions = ref(['read', 'write'])
-
-const canEdit = computed(() => {
-  if (!user.value) {
-    return false  // permissions.value never accessed when user is null
-  }
-  return permissions.value.includes('write')
-})
+// While hidden, changing details does not recompute summary; its result is
+// still 'Hidden'. Changing showDetails reruns the getter, which then tracks
+// details and returns its current value.
 </script>
 ```
 
-**Correct:**
-```vue
-<script setup>
+Short-circuit expressions behave the same way:
+
+```javascript
 import { ref, computed } from 'vue'
 
-const isEnabled = ref(false)
-const data = ref('important data')
-
-// GOOD: Access all dependencies first
-const result = computed(() => {
-  const enabled = isEnabled.value
-  const currentData = data.value  // Always accessed
-
-  if (!enabled) {
-    return 'disabled'
-  }
-  return currentData
-})
-
-// GOOD: Access both values before comparison
 const password = ref('')
 const confirmPassword = ref('')
 
-const isValid = computed(() => {
-  const pwd = password.value
-  const confirm = confirmPassword.value  // Always accessed
-
-  return pwd && pwd === confirm
-})
-
-// GOOD: Access all reactive sources upfront
-const user = ref(null)
-const permissions = ref(['read', 'write'])
-
-const canEdit = computed(() => {
-  const currentUser = user.value
-  const currentPermissions = permissions.value  // Always accessed
-
-  if (!currentUser) {
-    return false
-  }
-  return currentPermissions.includes('write')
-})
-</script>
+const isValid = computed(() =>
+  password.value.length > 0 && password.value === confirmPassword.value
+)
 ```
 
-## The Dependency Tracking Mechanism
-
-Vue's reactivity system works by tracking which reactive properties are accessed when a computed property runs:
-
-```javascript
-// How Vue tracks dependencies (simplified):
-// 1. Start tracking
-// 2. Run the getter function
-// 3. Record every .value or reactive property access
-// 4. Stop tracking
-
-const computed = computed(() => {
-  // Vue starts tracking here
-  if (conditionA.value) {      // conditionA is tracked
-    return valueB.value        // valueB is ONLY tracked if conditionA is true
-  }
-  return 'default'             // If conditionA is false, valueB is NOT tracked!
-})
-```
-
-## Pattern: Destructure All Dependencies First
-
-```javascript
-// GOOD PATTERN: Destructure/access everything at the top
-const result = computed(() => {
-  // Access all potential dependencies
-  const { user, settings, items } = toRefs(store)
-  const userVal = user.value
-  const settingsVal = settings.value
-  const itemsVal = items.value
-
-  // Now use conditional logic safely
-  if (!userVal) return []
-  if (!settingsVal.enabled) return []
-  return itemsVal.filter(i => i.active)
-})
-```
+When `password` is empty, `confirmPassword` is not read because the first operand determines the result. Once `password` changes to a non-empty value, Vue reruns the getter and begins tracking `confirmPassword` too.
 
 ## Reference
+
+- [Vue.js Computed Properties](https://vuejs.org/guide/essentials/computed.html)
 - [Vue.js Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth.html)
-- [GitHub Discussion: Dependency collection gotcha with conditionals](https://github.com/vuejs/Discussion/issues/15)
+- [Vue core: reactive effect dependency cleanup](https://github.com/vuejs/core/blob/main/packages/reactivity/src/effect.ts)

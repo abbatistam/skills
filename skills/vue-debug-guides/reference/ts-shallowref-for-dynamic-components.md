@@ -150,7 +150,7 @@ async function loadComponent(name: string) {
 For tab systems or wizard-like interfaces:
 
 ```typescript
-import { shallowRef, markRaw, type Component } from 'vue'
+import { ref, shallowRef, markRaw, type Component } from 'vue'
 
 // Type-safe component registry
 const componentRegistry = {
@@ -161,7 +161,7 @@ const componentRegistry = {
 
 type ComponentKey = keyof typeof componentRegistry
 
-const currentView = shallowRef<ComponentKey>('home')
+const currentView = ref<ComponentKey>('home')
 
 // Computed to get current component
 const currentComponent = computed(() => componentRegistry[currentView.value])

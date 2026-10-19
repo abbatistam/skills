@@ -296,7 +296,7 @@ selection.selectedId = 'item-1'
 **GOOD:**
 ```ts
 // selection-context.ts
-import { inject, provide, readonly, shallowRef } from 'vue'
+import { inject, provide, readonly, ref } from 'vue'
 import type { InjectionKey, Ref } from 'vue'
 
 interface SelectionContext {
@@ -307,7 +307,7 @@ interface SelectionContext {
 const selectionKey: InjectionKey<SelectionContext> = Symbol('selection')
 
 export function provideSelection() {
-  const selectedId = shallowRef<string | null>(null)
+  const selectedId = ref<string | null>(null)
   const context: SelectionContext = {
     selectedId: readonly(selectedId),
     select: (id) => { selectedId.value = id },

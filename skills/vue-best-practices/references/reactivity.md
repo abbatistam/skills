@@ -338,3 +338,9 @@ watch(query, async (q, _prev, onCleanup) => {
   results.value = await res.json()
 })
 ```
+
+## Reference
+
+- [Vue.js Reactivity Core: `ref()`](https://vuejs.org/api/reactivity-core.html#ref)
+- [Vue.js Advanced Reactivity: `shallowRef()`](https://vuejs.org/api/reactivity-advanced.html#shallowref)
+- [Vue core: `ref` and `shallowRef` implementation](https://github.com/vuejs/core/blob/main/packages/reactivity/src/ref.ts)

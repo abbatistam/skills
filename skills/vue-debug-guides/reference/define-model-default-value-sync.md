@@ -8,15 +8,18 @@ tags: [vue3, v-model, defineModel, components, props, two-way-binding]
 
 # defineModel Default Value Can Cause Parent-Child Desync
 
-**Impact: HIGH** - When using `defineModel()` with a default value and the parent doesn't provide a value, the parent and child components will have different values. The parent's ref stays `undefined` while the child uses the default, breaking the two-way binding contract.
+**Impact: HIGH** - When `defineModel()` has a default value and the parent provides no value, the child receives the default while the parent's ref stays `undefined`. Assigning that same default back through the model ref does not emit an update event, so the parent remains `undefined` until an update changes it.
+
+`defineModel()` requires Vue 3.4+. In earlier versions, declare the model prop and corresponding `update:` event explicitly.
 
 This subtle bug can cause confusing behavior where the parent component shows one value while the child shows another, and updates may not propagate correctly.
 
 ## Task Checklist
 
-- [ ] Always provide initial values from the parent when using v-model
+- [ ] Initialize the parent model when the parent owns the source of truth
 - [ ] Don't rely on defineModel defaults as the primary source of truth
 - [ ] If defaults are needed, also set them in the parent component
+- [ ] Don't assign the same default value to the model to try to force an update event
 - [ ] Test components with and without v-model props provided
 
 **Problem - Parent and child out of sync:**
@@ -49,7 +52,7 @@ const myValue = ref()  // undefined
   <!-- DESYNC: Child shows 1, but parent shows undefined -->
   <p>Parent value: {{ myValue }}</p>  <!-- Shows: undefined -->
 
-  <!-- Even after child changes value, parent may not update correctly -->
+  <!-- Parent remains undefined until the child emits a changed value -->
 </template>
 ```
 
@@ -70,7 +73,7 @@ const myValue = ref(1)  // Match the expected default
 </template>
 ```
 
-**Solution 2 - Child emits default on mount (if parent control not possible):**
+**Incorrect - Reassigning the same value does not force synchronization:**
 ```html
 <!-- ChildComponent.vue -->
 <script setup>
@@ -78,10 +81,9 @@ import { onMounted } from 'vue'
 
 const model = defineModel({ default: 1 })
 
-// Sync default value back to parent on mount
+// This assignment is ignored when the model already equals 1.
 onMounted(() => {
-  if (model.value === 1) {  // Is using default
-    // Force emit to sync parent
+  if (model.value === 1) {
     model.value = 1
   }
 })
@@ -91,6 +93,8 @@ onMounted(() => {
   <input v-model="model" type="number">
 </template>
 ```
+
+If the parent owns the value, initialize it there. If a child is intentionally responsible for initializing parent state, model that as an explicit update event in the component API; do not rely on a same-value assignment.
 
 **Solution 3 - Use required prop or explicit undefined handling:**
 ```html
@@ -113,27 +117,9 @@ const safeModel = computed({
 </template>
 ```
 
-**Best Practice - Document expected initial values:**
-```html
-<!-- ChildComponent.vue -->
-<script setup>
-/**
- * @prop modelValue - The numeric value (parent should initialize to 1 or desired default)
- */
-const model = defineModel({
-  type: Number,
-  default: 1,
-  // Adding validator helps catch issues in development
-  validator: (value) => {
-    if (value === undefined) {
-      console.warn('ChildComponent: v-model value is undefined. Provide initial value from parent.')
-    }
-    return true
-  }
-})
-</script>
-```
+Do not use a prop validator to detect that the parent model was omitted when the child declares a default: Vue validates the resolved child prop value, which is the default, not `undefined`.
 
 ## Reference
 - [Vue.js Component v-model](https://vuejs.org/guide/components/v-model.html)
-- [Vue School - defineModel Guide](https://vueschool.io/articles/vuejs-tutorials/v-model-and-definemodel-a-comprehensive-guide-to-two-way-binding-in-vue-js-3/)
+- [Vue core: useModel implementation](https://github.com/vuejs/core/blob/main/packages/runtime-core/src/helpers/useModel.ts)
+- [Vue core: prop resolution and validation](https://github.com/vuejs/core/blob/main/packages/runtime-core/src/componentProps.ts)

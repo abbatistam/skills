@@ -178,4 +178,3 @@ const { data: user, loading, error } = useRouteData('id', fetchUser)
 
 ## Reference
 - [Vue Router Dynamic Route Matching](https://router.vuejs.org/guide/essentials/dynamic-matching.html#reacting-to-params-changes)
-- [Vue School: Reacting to Param Changes](https://vueschool.io/lessons/reacting-to-param-changes)

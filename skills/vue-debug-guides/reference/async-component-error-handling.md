@@ -2,11 +2,11 @@
 
 ## Rule
 
-Always configure error handling for async components using `errorComponent` and/or `onError` callback. Without proper error handling, failed component loads can leave the UI in an undefined state with no user feedback.
+For user-facing async components, choose an intentional loading and failure experience. Use `loadingComponent` and `errorComponent` for UI states, and add `onError` when failed loads should be retried or handled programmatically.
 
 ## Why This Matters
 
-Network failures, timeouts, and server errors are common in production. Without error handling, users see blank spaces or broken UIs with no indication of what went wrong or how to recover.
+Network failures, timeouts, and server errors can reject the loader promise. Without a loading or error component, the async wrapper has no local fallback UI for those states.
 
 ## Bad Code
 
@@ -14,7 +14,8 @@ Network failures, timeouts, and server errors are common in production. Without 
 <script setup>
 import { defineAsyncComponent } from 'vue'
 
-// No error handling - fails silently
+// No local loading/error UI. If the loader rejects, Vue reports the error
+// through its component error handling, but this component has no fallback view.
 const AsyncWidget = defineAsyncComponent(() =>
   import('./Widget.vue')
 )
@@ -23,17 +24,27 @@ const AsyncWidget = defineAsyncComponent(() =>
 
 ```vue
 <script setup>
-import { defineAsyncComponent } from 'vue'
+import { defineAsyncComponent, ref } from 'vue'
+import LoadingSpinner from './LoadingSpinner.vue'
 
-// isLoading never becomes false on error - infinite spinner
 const isLoading = ref(true)
 const Widget = defineAsyncComponent({
-  loader: () => import('./Widget.vue').finally(() => {
-    isLoading.value = false  // Only runs on success
+  // This clears the flag only when the import fulfills. On rejection,
+  // the callback does not run and the flag stays true.
+  loader: () => import('./Widget.vue').then((module) => {
+    isLoading.value = false
+    return module
   })
 })
 </script>
+
+<template>
+  <LoadingSpinner v-if="isLoading" />
+  <Widget />
+</template>
 ```
+
+`Promise.prototype.finally()` runs after either fulfillment or rejection. It is useful for cleanup, but it does not handle or recover from a rejected loader; provide an error state as well.
 
 ## Good Code
 
@@ -56,6 +67,8 @@ const AsyncWidget = defineAsyncComponent({
 ```vue
 <script setup>
 import { defineAsyncComponent } from 'vue'
+import LoadingSpinner from './LoadingSpinner.vue'
+import ErrorDisplay from './ErrorDisplay.vue'
 
 // With retry logic using onError
 const AsyncWidget = defineAsyncComponent({
@@ -105,11 +118,8 @@ The `onError` callback receives four arguments:
 4. The `delay` option (default 200ms) prevents loading flicker on fast networks
 5. Use the fallback pattern (`.catch()` in loader) when you want a seamless degradation
 
-## SSR Warning
-
-Using `onError` with SSR can cause issues in some configurations, potentially leading to infinite loading. Test thoroughly in SSR environments.
-
 ## References
 
 - [Vue.js Async Components Documentation](https://vuejs.org/guide/components/async)
-- [Handling Async Components' loading errors](https://awad.dev/blog/handling-async-component-loading-errors/)
+- [Vue core: async component implementation](https://github.com/vuejs/core/blob/main/packages/runtime-core/src/apiAsyncComponent.ts)
+- [MDN: Promise.prototype.finally()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/finally)
