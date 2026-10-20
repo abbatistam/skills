@@ -156,6 +156,19 @@
         "Scopes the guidance to hand-rolled reactive objects and does not claim every store method or Pinia action universally needs or forbids a bare reference.",
         "Distinguishes Pinia's store-instance action contract and Vue's auto-bound Options API methods, following their documented call patterns."
       ]
+    },
+    {
+      "id": "options-api-stateful-debounce-per-instance",
+      "skill": "vue-options-api-best-practices",
+      "references": [
+        "reference/stateful-methods-lifecycle.md"
+      ],
+      "prompt": "An Options API child component creates `search: debounce(...)` in its shared `methods` option and is rendered for several rows. One row's typing suppresses another row's search. Explain why, show a per-instance pattern, and say when unmounted cleanup is useful.",
+      "rubric": [
+        "Identifies that the debounce wrapper is created once in the shared component options and its internal timing state can be shared by component instances.",
+        "Creates a separate debounced function per component instance in `created()` and invokes it through an Options API method.",
+        "Recommends canceling pending work in `unmounted()` when it could outlive the instance or cause stale effects, without claiming cleanup is a universal framework requirement."
+      ]
     }
   ]
 }
