@@ -1,22 +1,22 @@
 ---
-title: Include Parentheses When Calling Store Methods in Templates
+title: Preserve this When Passing Methods from Reactive Objects
 impact: MEDIUM
-impactDescription: Omitting parentheses on store method calls loses the correct 'this' context, causing unexpected behavior
+impactDescription: Passing an unbound method from a hand-rolled reactive object can lose its receiver
 type: gotcha
 tags: [vue3, state-management, reactive, methods, templates, this-binding]
 ---
 
-# Include Parentheses When Calling Store Methods in Templates
+# Preserve this When Passing Methods from Reactive Objects
 
-**Impact: MEDIUM** - When calling methods on a reactive store object in Vue templates, you must include parentheses (even without arguments) to ensure the method is called with the correct `this` context. Without parentheses, `this` inside the method may not refer to the store.
+This guidance applies to a hand-rolled store built with Vue's `reactive()` when a method depends on dynamic `this`. Passing `store.increment` as a template method handler passes the function as a callback; it does not call it as `store.increment()`. Use the call expression `@click="store.increment()"` or a closure that calls it through the store so the receiver is preserved.
 
-This is a subtle gotcha that can cause hard-to-debug issues with hand-rolled reactive stores.
+Vue's event-handling guide distinguishes a member-path method handler such as `foo.bar` from an inline call such as `foo()`. The receiver behavior then follows JavaScript's method-call rules.
 
 ## Task Checklist
 
-- [ ] Always use parentheses when calling store methods in templates: `@click="store.increment()"`
-- [ ] Avoid passing store methods as bare references: `@click="store.increment"` is problematic
-- [ ] Consider using arrow functions or Pinia (which handles this automatically)
+- [ ] For a hand-rolled reactive-object method that uses `this`, call it through the object: `@click="store.increment()"`
+- [ ] Avoid passing that method as a bare callback: `@click="store.increment"`
+- [ ] Use a closure or a closure-based action when the method should not rely on dynamic `this`
 - [ ] Test store method calls work correctly with `this` references
 
 ## The Problem
@@ -110,9 +110,9 @@ export const store = {
 }
 ```
 
-### 3. Use Pinia (Recommended)
+### 3. Use Pinia's documented action pattern
 
-Pinia handles method binding correctly:
+Pinia actions have their own store-instance `this` contract. The official action guide shows calling an action as a method in the template:
 
 ```javascript
 // stores/counter.js
@@ -135,9 +135,7 @@ const counter = useCounterStore()
 </script>
 
 <template>
-  <!-- Both work correctly with Pinia -->
-  <button @click="counter.increment">Works</button>
-  <button @click="counter.increment()">Also works</button>
+  <button @click="counter.increment()">Increment</button>
 </template>
 ```
 
@@ -163,29 +161,27 @@ function increment() {
 
 ## When This Matters
 
-This gotcha specifically affects:
+This guidance specifically affects:
 - Hand-rolled reactive stores using `reactive()`
 - Methods that reference `this` inside them
 - Direct method references in templates without parentheses
 
-It does NOT affect:
-- Pinia stores (methods are auto-bound)
-- Arrow function methods (no `this` binding)
-- Methods that don't use `this`
-- Method calls with parentheses
+It does not establish rules for Pinia actions or Vue component methods. Pinia documents actions as using the store instance for `this` and demonstrates calling them with `store.action()` in the template. Vue also auto-binds Options API component methods. Follow those APIs' documented patterns rather than applying the hand-rolled store example to every method.
 
 ## Quick Reference
 
 | Pattern | Safe? | Notes |
 |---------|-------|-------|
-| `@click="store.method()"` | Yes | Explicit call preserves context |
-| `@click="store.method"` | No* | Context may be lost |
-| `@click="() => store.method()"` | Yes | Arrow wrapper preserves context |
-| `@click="localMethod"` | Yes | Component methods are auto-bound |
-| Pinia: `@click="store.action"` | Yes | Pinia handles binding |
+| `@click="store.method()"` | Yes | Calls the method through the reactive object |
+| `@click="store.method"` | Risky | A callback reference may lose `this` |
+| `@click="() => store.method()"` | Yes | The closure calls through the object |
+| `@click="localMethod"` | Yes for Options API methods | Vue binds component methods to the instance |
+| Pinia: `@click="store.action()"` | Yes | Matches Pinia's documented template pattern |
 
 *Only problematic if the method uses `this`
 
 ## Reference
-- [Vue.js State Management - Tip on Method Binding](https://vuejs.org/guide/scaling-up/state-management.html#simple-state-management-with-reactivity-api)
-- [MDN - this in JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this)
+- [Vue.js Event Handling](https://vuejs.org/guide/essentials/event-handling.html#method-vs-inline-detection) — member-path method handlers versus inline call expressions.
+- [Vue.js Reactivity Fundamentals](https://vuejs.org/guide/essentials/reactivity-fundamentals.html) — Options API methods are automatically bound to the component instance.
+- [Pinia Actions](https://pinia.vuejs.org/core-concepts/actions.html) — actions use the store instance for `this` and are shown called as methods in templates.
+- [MDN: `this`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this) — JavaScript receiver rules for method calls.

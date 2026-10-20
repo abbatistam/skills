@@ -143,6 +143,19 @@
         "Recommends a unique stable primitive key when component state, temporary DOM state, transitions, or item identity must follow the data item.",
         "Explains that index keys can attach reused DOM/component state to a different item after reorder or insertion, without declaring index keys universally forbidden."
       ]
+    },
+    {
+      "id": "reactive-store-method-handler-this",
+      "skill": "vue-pinia-best-practices",
+      "references": [
+        "reference/store-method-binding-parentheses.md"
+      ],
+      "prompt": "I have a hand-rolled `reactive()` store whose `increment()` method uses `this.count++`, and I pass `store.increment` to `@click`. Explain the receiver risk and a reliable Vue template expression. Then distinguish that from a Pinia action and an Options API component method.",
+      "rubric": [
+        "Explains why passing a bare callback reference to a Vue method handler may not invoke it with the reactive store as `this`, and shows `@click=\"store.increment()\"` or a closure that calls through the store.",
+        "Scopes the guidance to hand-rolled reactive objects and does not claim every store method or Pinia action universally needs or forbids a bare reference.",
+        "Distinguishes Pinia's store-instance action contract and Vue's auto-bound Options API methods, following their documented call patterns."
+      ]
     }
   ]
 }
